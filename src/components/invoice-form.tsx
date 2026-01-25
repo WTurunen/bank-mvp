@@ -29,15 +29,17 @@ type Props = {
   invoice?: Invoice;
 };
 
+// Calculate default due date outside component to avoid React purity rule violation
+const getDefaultDueDate = () =>
+  new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split("T")[0];
+
 export function InvoiceForm({ invoice }: Props) {
   const [clientName, setClientName] = useState(invoice?.clientName ?? "");
   const [clientEmail, setClientEmail] = useState(invoice?.clientEmail ?? "");
-  const [dueDate, setDueDate] = useState(
+  const [dueDate, setDueDate] = useState(() =>
     invoice?.dueDate
       ? new Date(invoice.dueDate).toISOString().split("T")[0]
-      : new Date(Date.now() + 30 * 24 * 60 * 60 * 1000)
-          .toISOString()
-          .split("T")[0]
+      : getDefaultDueDate()
   );
   const [notes, setNotes] = useState(invoice?.notes ?? "");
   const [lineItems, setLineItems] = useState<LineItem[]>(
