@@ -148,13 +148,14 @@ export function InvoiceForm({ invoice }: Props) {
 
       if (invoice) {
         await updateInvoice(invoice.id, data);
-        router.push(`/invoices/${invoice.id}`);
+        router.refresh();
       } else {
         const newId = await createInvoice(data);
         router.push(`/invoices/${newId}`);
       }
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to save invoice. Please try again.");
+    } finally {
       setIsSubmitting(false);
     }
   };
