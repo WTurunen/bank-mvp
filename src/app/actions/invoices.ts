@@ -44,7 +44,7 @@ export async function createInvoice(data: InvoiceInput) {
   });
 
   revalidatePath("/");
-  redirect(`/invoices/${invoice.id}`);
+  return invoice.id;
 }
 
 export async function updateInvoice(id: string, data: InvoiceInput) {
@@ -69,7 +69,6 @@ export async function updateInvoice(id: string, data: InvoiceInput) {
 
   revalidatePath("/");
   revalidatePath(`/invoices/${id}`);
-  redirect(`/invoices/${id}`);
 }
 
 export async function updateInvoiceStatus(id: string, status: string) {

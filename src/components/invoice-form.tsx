@@ -150,16 +150,10 @@ export function InvoiceForm({ invoice }: Props) {
         await updateInvoice(invoice.id, data);
         router.push(`/invoices/${invoice.id}`);
       } else {
-        await createInvoice(data);
-        // createInvoice redirects internally, but if it doesn't:
-        router.push("/");
+        const newId = await createInvoice(data);
+        router.push(`/invoices/${newId}`);
       }
     } catch (err) {
-      // Next.js redirect() throws an error with digest containing "NEXT_REDIRECT"
-      // Re-throw it so Next.js can handle the redirect
-      if (err instanceof Error && err.message.includes("NEXT_REDIRECT")) {
-        throw err;
-      }
       setError(err instanceof Error ? err.message : "Failed to save invoice. Please try again.");
       setIsSubmitting(false);
     }
