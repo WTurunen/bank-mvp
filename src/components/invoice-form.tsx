@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -9,6 +10,23 @@ import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { formatCurrency } from "@/lib/utils";
 import { createInvoice, updateInvoice } from "@/app/actions/invoices";
+
+// Only allow digits, comma, and dot
+const isValidNumericInput = (value: string) => /^[\d.,]*$/.test(value);
+
+// Parse number, treating comma as decimal separator
+const parseNum = (val: string) => {
+  const normalized = val.replace(",", ".");
+  const num = parseFloat(normalized);
+  return isNaN(num) ? 0 : num;
+};
+
+// Validate that string represents a valid number
+const isValidNumber = (val: string) => {
+  if (!val || val === "") return true; // Empty is ok, will default to 0
+  const normalized = val.replace(",", ".");
+  return !isNaN(parseFloat(normalized));
+};
 
 type LineItem = {
   id: string;
@@ -54,6 +72,8 @@ export function InvoiceForm({ invoice }: Props) {
     ]
   );
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const router = useRouter();
 
   const addLineItem = () => {
     setLineItems([
@@ -68,15 +88,18 @@ export function InvoiceForm({ invoice }: Props) {
     }
   };
 
-  const updateLineItem = (id: string, field: keyof LineItem, value: string | number) => {
+  const updateLineItem = (id: string, field: keyof LineItem, value: string) => {
+    // For numeric fields, only allow valid numeric characters
+    if ((field === "quantity" || field === "unitPrice") && !isValidNumericInput(value)) {
+      return; // Reject invalid input
+    }
     setLineItems(
       lineItems.map((item) =>
         item.id === id ? { ...item, [field]: value } : item
       )
     );
+    setError(null); // Clear error when user types
   };
-
-  const parseNum = (val: string) => parseFloat(val) || 0;
 
   const total = lineItems.reduce(
     (sum, item) => sum + parseNum(item.quantity) * parseNum(item.unitPrice),
@@ -85,29 +108,66 @@ export function InvoiceForm({ invoice }: Props) {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setError(null);
+
+    // Validate all numeric fields
+    for (const item of lineItems) {
+      if (!isValidNumber(item.quantity)) {
+        setError(`Invalid quantity: "${item.quantity}". Use only numbers, comma or dot.`);
+        return;
+      }
+      if (!isValidNumber(item.unitPrice)) {
+        setError(`Invalid unit price: "${item.unitPrice}". Use only numbers, comma or dot.`);
+        return;
+      }
+    }
+
+    // Validate at least one line item has values
+    const hasValidLineItem = lineItems.some(
+      (item) => item.description && parseNum(item.unitPrice) > 0
+    );
+    if (!hasValidLineItem) {
+      setError("Please add at least one line item with a description and price.");
+      return;
+    }
+
     setIsSubmitting(true);
 
-    const data = {
-      clientName,
-      clientEmail,
-      dueDate,
-      notes,
-      lineItems: lineItems.map((item) => ({
-        description: item.description,
-        quantity: parseNum(item.quantity),
-        unitPrice: parseNum(item.unitPrice),
-      })),
-    };
+    try {
+      const data = {
+        clientName,
+        clientEmail,
+        dueDate,
+        notes,
+        lineItems: lineItems.map((item) => ({
+          description: item.description,
+          quantity: parseNum(item.quantity),
+          unitPrice: parseNum(item.unitPrice),
+        })),
+      };
 
-    if (invoice) {
-      await updateInvoice(invoice.id, data);
-    } else {
-      await createInvoice(data);
+      if (invoice) {
+        await updateInvoice(invoice.id, data);
+        router.push(`/invoices/${invoice.id}`);
+      } else {
+        await createInvoice(data);
+        // createInvoice redirects internally, but if it doesn't:
+        router.push("/");
+      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to save invoice. Please try again.");
+      setIsSubmitting(false);
     }
   };
 
   return (
     <form onSubmit={handleSubmit} className="space-y-6">
+      {error && (
+        <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded">
+          {error}
+        </div>
+      )}
+
       <Card>
         <CardHeader>
           <CardTitle>Client Information</CardTitle>
