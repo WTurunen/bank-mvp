@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -12,21 +13,21 @@ import { createInvoice, updateInvoice } from "@/app/actions/invoices";
 type LineItem = {
   id: string;
   description: string;
-  quantity: number;
-  unitPrice: number;
+  quantity: string;
+  unitPrice: string;
 };
 
-type Invoice = {
+type InvoiceProp = {
   id: string;
   clientName: string;
   clientEmail: string;
   dueDate: Date;
   notes: string | null;
-  lineItems: LineItem[];
+  lineItems: { id: string; description: string; quantity: number; unitPrice: number }[];
 };
 
 type Props = {
-  invoice?: Invoice;
+  invoice?: InvoiceProp;
 };
 
 // Calculate default due date outside component to avoid React purity rule violation
@@ -43,8 +44,13 @@ export function InvoiceForm({ invoice }: Props) {
   );
   const [notes, setNotes] = useState(invoice?.notes ?? "");
   const [lineItems, setLineItems] = useState<LineItem[]>(
-    invoice?.lineItems ?? [
-      { id: crypto.randomUUID(), description: "", quantity: 1, unitPrice: 0 },
+    invoice?.lineItems.map((item) => ({
+      id: item.id,
+      description: item.description,
+      quantity: String(item.quantity),
+      unitPrice: String(item.unitPrice),
+    })) ?? [
+      { id: crypto.randomUUID(), description: "", quantity: "1", unitPrice: "" },
     ]
   );
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -52,7 +58,7 @@ export function InvoiceForm({ invoice }: Props) {
   const addLineItem = () => {
     setLineItems([
       ...lineItems,
-      { id: crypto.randomUUID(), description: "", quantity: 1, unitPrice: 0 },
+      { id: crypto.randomUUID(), description: "", quantity: "1", unitPrice: "" },
     ]);
   };
 
@@ -70,8 +76,10 @@ export function InvoiceForm({ invoice }: Props) {
     );
   };
 
+  const parseNum = (val: string) => parseFloat(val) || 0;
+
   const total = lineItems.reduce(
-    (sum, item) => sum + item.quantity * item.unitPrice,
+    (sum, item) => sum + parseNum(item.quantity) * parseNum(item.unitPrice),
     0
   );
 
@@ -86,8 +94,8 @@ export function InvoiceForm({ invoice }: Props) {
       notes,
       lineItems: lineItems.map((item) => ({
         description: item.description,
-        quantity: item.quantity,
-        unitPrice: item.unitPrice,
+        quantity: parseNum(item.quantity),
+        unitPrice: parseNum(item.unitPrice),
       })),
     };
 
@@ -163,12 +171,11 @@ export function InvoiceForm({ invoice }: Props) {
               <div className="col-span-2 space-y-2">
                 {index === 0 && <Label>Qty</Label>}
                 <Input
-                  type="number"
-                  min="1"
-                  step="1"
+                  type="text"
+                  inputMode="numeric"
                   value={item.quantity}
                   onChange={(e) =>
-                    updateLineItem(item.id, "quantity", parseFloat(e.target.value) || 0)
+                    updateLineItem(item.id, "quantity", e.target.value)
                   }
                   required
                 />
@@ -176,20 +183,19 @@ export function InvoiceForm({ invoice }: Props) {
               <div className="col-span-2 space-y-2">
                 {index === 0 && <Label>Unit Price</Label>}
                 <Input
-                  type="number"
-                  min="0"
-                  step="0.01"
+                  type="text"
+                  inputMode="decimal"
                   value={item.unitPrice}
                   onChange={(e) =>
-                    updateLineItem(item.id, "unitPrice", parseFloat(e.target.value) || 0)
+                    updateLineItem(item.id, "unitPrice", e.target.value)
                   }
-                  required
+                  placeholder="0.00"
                 />
               </div>
               <div className="col-span-2 space-y-2">
                 {index === 0 && <Label>Total</Label>}
                 <div className="h-9 flex items-center font-medium">
-                  {formatCurrency(item.quantity * item.unitPrice)}
+                  {formatCurrency(parseNum(item.quantity) * parseNum(item.unitPrice))}
                 </div>
               </div>
               <div className="col-span-1">
@@ -237,6 +243,9 @@ export function InvoiceForm({ invoice }: Props) {
             : invoice
             ? "Update Invoice"
             : "Create Invoice"}
+        </Button>
+        <Button type="button" variant="outline" asChild>
+          <Link href="/">Cancel</Link>
         </Button>
       </div>
     </form>
