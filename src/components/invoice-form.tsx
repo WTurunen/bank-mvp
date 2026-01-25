@@ -155,6 +155,11 @@ export function InvoiceForm({ invoice }: Props) {
         router.push("/");
       }
     } catch (err) {
+      // Next.js redirect() throws an error with digest containing "NEXT_REDIRECT"
+      // This is expected behavior, not an actual error
+      if (err instanceof Error && err.message.includes("NEXT_REDIRECT")) {
+        return; // Let the redirect happen
+      }
       setError(err instanceof Error ? err.message : "Failed to save invoice. Please try again.");
       setIsSubmitting(false);
     }
