@@ -31,9 +31,9 @@ export default async function InvoicePreviewPage({ params }: Props) {
               <p className="text-gray-600 mt-1">{invoice.invoiceNumber}</p>
             </div>
             <div className="text-right">
-              <h2 className="text-xl font-bold text-gray-900">Your Company</h2>
-              <p className="text-gray-600">123 Business Street</p>
-              <p className="text-gray-600">City, State 12345</p>
+              <h2 className="text-xl font-bold text-gray-900">Acme Consulting</h2>
+              <p className="text-gray-600">100 Innovation Drive</p>
+              <p className="text-gray-600">San Francisco, CA 94102</p>
             </div>
           </div>
 
