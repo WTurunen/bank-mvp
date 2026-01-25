@@ -70,7 +70,7 @@ export default async function EditInvoicePage({ params }: Props) {
             </form>
           </div>
         </div>
-        <InvoiceForm invoice={invoice} />
+        <InvoiceForm key={invoice.updatedAt.toString()} invoice={invoice} />
       </div>
     </div>
   );
