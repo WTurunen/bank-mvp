@@ -32,6 +32,11 @@ jobs:
       - name: Run tests
         run: npm run test:run
 
+      - name: Setup database
+        run: npx prisma db push
+        env:
+          DATABASE_URL: "file:./test.db"
+
       - name: Build application
         run: npm run build
         env:
