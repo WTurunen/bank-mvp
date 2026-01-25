@@ -156,9 +156,9 @@ export function InvoiceForm({ invoice }: Props) {
       }
     } catch (err) {
       // Next.js redirect() throws an error with digest containing "NEXT_REDIRECT"
-      // This is expected behavior, not an actual error
+      // Re-throw it so Next.js can handle the redirect
       if (err instanceof Error && err.message.includes("NEXT_REDIRECT")) {
-        return; // Let the redirect happen
+        throw err;
       }
       setError(err instanceof Error ? err.message : "Failed to save invoice. Please try again.");
       setIsSubmitting(false);
