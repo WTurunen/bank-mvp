@@ -100,11 +100,12 @@ export function validateInvoice(invoice: InvoiceFormData): ValidationResult[] {
   const lineItemsResult = validateLineItems(invoice.lineItems)
   if (!lineItemsResult.valid) {
     errors.push(lineItemsResult)
-  }
-
-  const completeLineItemResult = validateHasCompleteLineItem(invoice.lineItems)
-  if (!completeLineItemResult.valid) {
-    errors.push(completeLineItemResult)
+  } else {
+    // Only check for complete line item if we have at least one item
+    const completeLineItemResult = validateHasCompleteLineItem(invoice.lineItems)
+    if (!completeLineItemResult.valid) {
+      errors.push(completeLineItemResult)
+    }
   }
 
   for (const item of invoice.lineItems) {

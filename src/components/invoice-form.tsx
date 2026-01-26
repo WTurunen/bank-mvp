@@ -10,6 +10,12 @@ import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { formatCurrency } from "@/lib/utils";
 import { createInvoice, updateInvoice } from "@/app/actions/invoices";
+import {
+  validateLineItemNumeric,
+  validateLineItemPrice,
+  validateHasCompleteLineItem,
+  VALIDATION_MESSAGES,
+} from "@/lib/validation";
 
 // Only allow digits, comma, and dot
 const isValidNumericInput = (value: string) => /^[\d.,]*$/.test(value);
@@ -19,13 +25,6 @@ const parseNum = (val: string) => {
   const normalized = val.replace(",", ".");
   const num = parseFloat(normalized);
   return isNaN(num) ? 0 : num;
-};
-
-// Validate that string represents a valid number
-const isValidNumber = (val: string) => {
-  if (!val || val === "") return true; // Empty is ok, will default to 0
-  const normalized = val.replace(",", ".");
-  return !isNaN(parseFloat(normalized));
 };
 
 type LineItem = {
@@ -110,24 +109,46 @@ export function InvoiceForm({ invoice }: Props) {
     e.preventDefault();
     setError(null);
 
-    // Validate all numeric fields
+    // Validate all numeric fields using centralized validation
     for (const item of lineItems) {
-      if (!isValidNumber(item.quantity)) {
-        setError(`Invalid quantity: "${item.quantity}". Use only numbers, comma or dot.`);
+      const quantity = parseNum(item.quantity);
+      const unitPrice = parseNum(item.unitPrice);
+
+      // Check if values can be parsed as numbers
+      const quantityNumericResult = validateLineItemNumeric(
+        item.quantity === "" ? 0 : quantity
+      );
+      if (!quantityNumericResult.valid) {
+        setError(`Invalid quantity: "${item.quantity}". ${VALIDATION_MESSAGES.VALUE_NOT_NUMERIC}`);
         return;
       }
-      if (!isValidNumber(item.unitPrice)) {
-        setError(`Invalid unit price: "${item.unitPrice}". Use only numbers, comma or dot.`);
+
+      const priceNumericResult = validateLineItemNumeric(
+        item.unitPrice === "" ? 0 : unitPrice
+      );
+      if (!priceNumericResult.valid) {
+        setError(`Invalid unit price: "${item.unitPrice}". ${VALIDATION_MESSAGES.VALUE_NOT_NUMERIC}`);
+        return;
+      }
+
+      // Validate price is non-negative
+      const priceResult = validateLineItemPrice(unitPrice);
+      if (!priceResult.valid) {
+        setError(priceResult.message);
         return;
       }
     }
 
-    // Validate at least one line item has values
-    const hasValidLineItem = lineItems.some(
-      (item) => item.description && parseNum(item.unitPrice) > 0
-    );
-    if (!hasValidLineItem) {
-      setError("Please add at least one line item with a description and price.");
+    // Validate at least one line item has description and positive price
+    const parsedLineItems = lineItems.map((item) => ({
+      id: item.id,
+      description: item.description,
+      quantity: parseNum(item.quantity),
+      unitPrice: parseNum(item.unitPrice),
+    }));
+    const completeLineItemResult = validateHasCompleteLineItem(parsedLineItems);
+    if (!completeLineItemResult.valid) {
+      setError(completeLineItemResult.message);
       return;
     }
 

@@ -1,5 +1,3 @@
-import '@testing-library/react'
-
 // Test factories - consistent test data
 export type MockLineItem = {
   id: string
