@@ -104,10 +104,21 @@ export default async function Dashboard() {
                       {formatCurrency(calculateInvoiceTotal(invoice.lineItems))}
                     </TableCell>
                     <TableCell>
-                      <StatusBadge status={invoice.status as 'draft' | 'sent' | 'paid'} />
+                      <StatusBadge
+                        status={
+                          invoice.status === 'sent' && new Date(invoice.dueDate) < new Date()
+                            ? 'overdue'
+                            : invoice.status as 'draft' | 'sent' | 'paid'
+                        }
+                      />
                     </TableCell>
                     <TableCell>{formatDate(invoice.dueDate)}</TableCell>
                     <TableCell className="text-right space-x-2">
+                      <Link href={`/invoices/${invoice.id}`}>
+                        <Button variant="outline" size="sm">
+                          Edit
+                        </Button>
+                      </Link>
                       <Link href={`/invoices/${invoice.id}/preview`}>
                         <Button variant="outline" size="sm">
                           View

@@ -15,8 +15,8 @@
   --status-sent-bg: #DBEAFE;
   --status-paid-text: #059669;
   --status-paid-bg: #D1FAE5;
-  --status-overdue-text: #D97706;
-  --status-overdue-bg: #FEF3C7;
+  --status-overdue-text: #DC2626;
+  --status-overdue-bg: #FEE2E2;
 }
 
 @theme inline {
