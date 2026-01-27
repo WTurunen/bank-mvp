@@ -90,9 +90,9 @@ async function main() {
     issueDate.setDate(issueDate.getDate() - inv.daysAgo);
 
     const dueDate = new Date();
-    if ('dueDaysAgo' in inv) {
+    if ('dueDaysAgo' in inv && inv.dueDaysAgo !== undefined) {
       dueDate.setDate(dueDate.getDate() - inv.dueDaysAgo);
-    } else if ('dueDaysFromNow' in inv) {
+    } else if ('dueDaysFromNow' in inv && inv.dueDaysFromNow !== undefined) {
       dueDate.setDate(dueDate.getDate() + inv.dueDaysFromNow);
     }
 
