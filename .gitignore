@@ -25,3 +25,6 @@ Thumbs.db
 
 # Git worktrees
 .worktrees
+
+# Private notes
+docs/interview-assessment-private.md
