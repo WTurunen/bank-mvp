@@ -258,6 +258,7 @@ export function InvoiceForm({ invoice }: Props) {
                       onClick={() => removeLineItem(item.id)}
                       disabled={lineItems.length === 1}
                       className="p-2 text-slate-400 hover:text-red-600 disabled:opacity-50"
+                      aria-label="Remove line item"
                     >
                       <X className="w-5 h-5" />
                     </button>
@@ -349,6 +350,7 @@ export function InvoiceForm({ invoice }: Props) {
                       onClick={() => removeLineItem(item.id)}
                       disabled={lineItems.length === 1}
                       className="text-slate-400 hover:text-red-600"
+                      aria-label="Remove line item"
                     >
                       <X className="w-4 h-4" />
                     </Button>

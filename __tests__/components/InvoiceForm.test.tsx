@@ -93,50 +93,52 @@ describe('InvoiceForm', () => {
       const user = userEvent.setup()
       render(<InvoiceForm />)
 
+      // Note: 2 inputs per line item (mobile + desktop views)
       const descriptionInputs = screen.getAllByPlaceholderText(/service or product/i)
-      expect(descriptionInputs).toHaveLength(1)
+      expect(descriptionInputs).toHaveLength(2)
 
       await user.click(screen.getByRole('button', { name: /add line item/i }))
 
       const updatedInputs = screen.getAllByPlaceholderText(/service or product/i)
-      expect(updatedInputs).toHaveLength(2)
+      expect(updatedInputs).toHaveLength(4)
     })
 
     it('can remove a line item when multiple exist', async () => {
       const user = userEvent.setup()
       render(<InvoiceForm />)
 
-      // Add a second line item
+      // Add a second line item (2 inputs per line item: mobile + desktop)
       await user.click(screen.getByRole('button', { name: /add line item/i }))
-      expect(screen.getAllByPlaceholderText(/service or product/i)).toHaveLength(2)
+      expect(screen.getAllByPlaceholderText(/service or product/i)).toHaveLength(4)
 
-      // Remove one
-      const removeButtons = screen.getAllByRole('button', { name: /x/i })
+      // Remove one (2 remove buttons per line item: mobile + desktop)
+      const removeButtons = screen.getAllByRole('button', { name: /remove line item/i })
       await user.click(removeButtons[0])
 
-      expect(screen.getAllByPlaceholderText(/service or product/i)).toHaveLength(1)
+      expect(screen.getAllByPlaceholderText(/service or product/i)).toHaveLength(2)
     })
 
     it('cannot remove the last line item', async () => {
       render(<InvoiceForm />)
 
-      const removeButton = screen.getByRole('button', { name: /x/i })
-      expect(removeButton).toBeDisabled()
+      const removeButtons = screen.getAllByRole('button', { name: /remove line item/i })
+      // Both mobile and desktop remove buttons should be disabled
+      removeButtons.forEach(btn => expect(btn).toBeDisabled())
     })
 
     it('updates totals when values change', async () => {
       const user = userEvent.setup()
       render(<InvoiceForm />)
 
-      // Find quantity and price inputs - they're text inputs with specific values
-      const quantityInput = screen.getByDisplayValue('1')
-      const priceInput = screen.getByPlaceholderText('0.00')
+      // Find quantity and price inputs (use first of each - mobile/desktop duplicates)
+      const quantityInputs = screen.getAllByDisplayValue('1')
+      const priceInputs = screen.getAllByPlaceholderText('0.00')
 
-      await user.clear(quantityInput)
-      await user.type(quantityInput, '5')
-      await user.type(priceInput, '20')
+      await user.clear(quantityInputs[0])
+      await user.type(quantityInputs[0], '5')
+      await user.type(priceInputs[0], '20')
 
-      // Total should be 5 * 20 = 100 - appears twice (line total and invoice total)
+      // Total should be 5 * 20 = 100 - appears multiple times (line totals + invoice total)
       const totals = screen.getAllByText(/\$100\.00/)
       expect(totals.length).toBeGreaterThanOrEqual(1)
     })
@@ -151,8 +153,8 @@ describe('InvoiceForm', () => {
       await user.type(screen.getByLabelText(/client name/i), 'Test Client')
       await user.type(screen.getByLabelText(/client email/i), 'test@example.com')
       // Fill description to pass HTML5 required, but leave price empty (defaults to 0)
-      const descInput = screen.getByPlaceholderText(/service or product/i)
-      await user.type(descInput, 'Some service')
+      const descInputs = screen.getAllByPlaceholderText(/service or product/i)
+      await user.type(descInputs[0], 'Some service')
 
       await user.click(screen.getByRole('button', { name: /create invoice/i }))
 
@@ -168,8 +170,8 @@ describe('InvoiceForm', () => {
       // Fill all HTML5 required fields, but leave price at 0
       await user.type(screen.getByLabelText(/client name/i), 'Test Client')
       await user.type(screen.getByLabelText(/client email/i), 'test@example.com')
-      const descInput = screen.getByPlaceholderText(/service or product/i)
-      await user.type(descInput, 'Some service')
+      const descInputs = screen.getAllByPlaceholderText(/service or product/i)
+      await user.type(descInputs[0], 'Some service')
 
       // Submit to trigger error
       await user.click(screen.getByRole('button', { name: /create invoice/i }))
@@ -179,8 +181,8 @@ describe('InvoiceForm', () => {
       })
 
       // Type in price field - should clear error
-      const priceInput = screen.getByPlaceholderText('0.00')
-      await user.type(priceInput, '50')
+      const priceInputs = screen.getAllByPlaceholderText('0.00')
+      await user.type(priceInputs[0], '50')
 
       expect(screen.queryByText(/at least one line item/i)).not.toBeInTheDocument()
     })
@@ -189,23 +191,23 @@ describe('InvoiceForm', () => {
       const user = userEvent.setup()
       render(<InvoiceForm />)
 
-      const priceInput = screen.getByPlaceholderText('0.00')
+      const priceInputs = screen.getAllByPlaceholderText('0.00')
 
       // Try to type letters - should be rejected
-      await user.type(priceInput, 'abc')
+      await user.type(priceInputs[0], 'abc')
 
-      expect(priceInput).toHaveValue('')
+      expect(priceInputs[0]).toHaveValue('')
     })
 
     it('accepts valid numeric input with comma', async () => {
       const user = userEvent.setup()
       render(<InvoiceForm />)
 
-      const priceInput = screen.getByPlaceholderText('0.00')
+      const priceInputs = screen.getAllByPlaceholderText('0.00')
 
-      await user.type(priceInput, '99,50')
+      await user.type(priceInputs[0], '99,50')
 
-      expect(priceInput).toHaveValue('99,50')
+      expect(priceInputs[0]).toHaveValue('99,50')
     })
   })
 
@@ -218,11 +220,11 @@ describe('InvoiceForm', () => {
       await user.type(screen.getByLabelText(/client name/i), 'Test Client')
       await user.type(screen.getByLabelText(/client email/i), 'test@example.com')
 
-      const descInput = screen.getByPlaceholderText(/service or product/i)
-      await user.type(descInput, 'Web Development')
+      const descInputs = screen.getAllByPlaceholderText(/service or product/i)
+      await user.type(descInputs[0], 'Web Development')
 
-      const priceInput = screen.getByPlaceholderText('0.00')
-      await user.type(priceInput, '500')
+      const priceInputs = screen.getAllByPlaceholderText('0.00')
+      await user.type(priceInputs[0], '500')
 
       await user.click(screen.getByRole('button', { name: /create invoice/i }))
 
@@ -252,11 +254,11 @@ describe('InvoiceForm', () => {
       await user.type(screen.getByLabelText(/client name/i), 'Test Client')
       await user.type(screen.getByLabelText(/client email/i), 'test@example.com')
 
-      const descInput = screen.getByPlaceholderText(/service or product/i)
-      await user.type(descInput, 'Service')
+      const descInputs = screen.getAllByPlaceholderText(/service or product/i)
+      await user.type(descInputs[0], 'Service')
 
-      const priceInput = screen.getByPlaceholderText('0.00')
-      await user.type(priceInput, '100')
+      const priceInputs = screen.getAllByPlaceholderText('0.00')
+      await user.type(priceInputs[0], '100')
 
       await user.click(screen.getByRole('button', { name: /create invoice/i }))
 
@@ -344,11 +346,11 @@ describe('InvoiceForm', () => {
       await user.type(screen.getByLabelText(/client name/i), 'Test')
       await user.type(screen.getByLabelText(/client email/i), 'test@test.com')
 
-      const descInput = screen.getByPlaceholderText(/service or product/i)
-      await user.type(descInput, 'Service')
+      const descInputs = screen.getAllByPlaceholderText(/service or product/i)
+      await user.type(descInputs[0], 'Service')
 
-      const priceInput = screen.getByPlaceholderText('0.00')
-      await user.type(priceInput, '100')
+      const priceInputs = screen.getAllByPlaceholderText('0.00')
+      await user.type(priceInputs[0], '100')
 
       await user.click(screen.getByRole('button', { name: /create invoice/i }))
 
