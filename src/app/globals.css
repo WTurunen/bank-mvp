@@ -3,6 +3,22 @@
 
 @custom-variant dark (&:is(.dark *));
 
+:root {
+  --color-primary: #2563EB;
+  --color-primary-hover: #1D4ED8;
+  --color-text: #0F172A;
+  --color-text-muted: #64748B;
+
+  --status-draft-text: #64748B;
+  --status-draft-bg: #F1F5F9;
+  --status-sent-text: #2563EB;
+  --status-sent-bg: #DBEAFE;
+  --status-paid-text: #059669;
+  --status-paid-bg: #D1FAE5;
+  --status-overdue-text: #DC2626;
+  --status-overdue-bg: #FEE2E2;
+}
+
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);

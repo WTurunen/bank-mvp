@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { ArrowLeft, Plus, X } from "lucide-react";
 import { formatCurrency } from "@/lib/utils";
 import { createInvoice, updateInvoice } from "@/app/actions/invoices";
 import {
@@ -183,20 +183,25 @@ export function InvoiceForm({ invoice }: Props) {
 
   return (
     <form onSubmit={handleSubmit} className="space-y-6">
+      <Link href="/" className="inline-flex items-center gap-2 text-sm text-slate-600 hover:text-slate-900 mb-6">
+        <ArrowLeft className="w-4 h-4" />
+        Back to Invoices
+      </Link>
+
       {error && (
         <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded">
           {error}
         </div>
       )}
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Client Information</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4">
+      <section className="bg-white shadow-sm ring-1 ring-slate-900/5 rounded-lg p-6">
+        <h2 className="text-sm font-medium text-slate-500 uppercase tracking-wide mb-4">
+          Client Information
+        </h2>
+        <div className="space-y-4">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="space-y-2">
-              <Label htmlFor="clientName">Client Name</Label>
+              <Label htmlFor="clientName">Client Name <span className="text-slate-400 font-normal">(required)</span></Label>
               <Input
                 id="clientName"
                 value={clientName}
@@ -205,7 +210,7 @@ export function InvoiceForm({ invoice }: Props) {
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="clientEmail">Client Email</Label>
+              <Label htmlFor="clientEmail">Client Email <span className="text-slate-400 font-normal">(required)</span></Label>
               <Input
                 id="clientEmail"
                 type="email"
@@ -216,7 +221,7 @@ export function InvoiceForm({ invoice }: Props) {
             </div>
           </div>
           <div className="space-y-2">
-            <Label htmlFor="dueDate">Due Date</Label>
+            <Label htmlFor="dueDate">Due Date <span className="text-slate-400 font-normal">(required)</span></Label>
             <Input
               id="dueDate"
               type="date"
@@ -225,108 +230,165 @@ export function InvoiceForm({ invoice }: Props) {
               required
             />
           </div>
-        </CardContent>
-      </Card>
+        </div>
+      </section>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Line Items</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          {lineItems.map((item, index) => (
-            <div
-              key={item.id}
-              className="grid grid-cols-12 gap-4 items-end"
-            >
-              <div className="col-span-5 space-y-2">
-                {index === 0 && <Label>Description</Label>}
-                <Input
-                  value={item.description}
-                  onChange={(e) =>
-                    updateLineItem(item.id, "description", e.target.value)
-                  }
-                  placeholder="Service or product description"
-                  required
-                />
-              </div>
-              <div className="col-span-2 space-y-2">
-                {index === 0 && <Label>Qty</Label>}
-                <Input
-                  type="text"
-                  inputMode="numeric"
-                  value={item.quantity}
-                  onChange={(e) =>
-                    updateLineItem(item.id, "quantity", e.target.value)
-                  }
-                  required
-                />
-              </div>
-              <div className="col-span-2 space-y-2">
-                {index === 0 && <Label>Unit Price</Label>}
-                <Input
-                  type="text"
-                  inputMode="decimal"
-                  value={item.unitPrice}
-                  onChange={(e) =>
-                    updateLineItem(item.id, "unitPrice", e.target.value)
-                  }
-                  placeholder="0.00"
-                />
-              </div>
-              <div className="col-span-2 space-y-2">
-                {index === 0 && <Label>Total</Label>}
-                <div className="h-9 flex items-center font-medium">
-                  {formatCurrency(parseNum(item.quantity) * parseNum(item.unitPrice))}
+      <section className="bg-white shadow-sm ring-1 ring-slate-900/5 rounded-lg p-6">
+        <h2 className="text-sm font-medium text-slate-500 uppercase tracking-wide mb-4">
+          Line Items
+        </h2>
+        <div className="space-y-4">
+          <div className="hidden md:grid md:grid-cols-12 gap-4 mb-2 text-sm font-medium text-slate-500">
+            <div className="col-span-5">Description</div>
+            <div className="col-span-2">Qty</div>
+            <div className="col-span-2">Price</div>
+            <div className="col-span-2">Total</div>
+            <div className="col-span-1"></div>
+          </div>
+
+          <div className="space-y-3">
+            {lineItems.map((item, index) => (
+              <div key={item.id} className="bg-slate-50 rounded-lg p-4 md:p-0 md:bg-transparent md:rounded-none">
+                {/* Mobile: show labels, stack vertically */}
+                <div className="md:hidden space-y-3">
+                  <div className="flex justify-between items-start">
+                    <span className="text-sm font-medium text-slate-700">Line Item {index + 1}</span>
+                    <button
+                      type="button"
+                      onClick={() => removeLineItem(item.id)}
+                      disabled={lineItems.length === 1}
+                      className="p-2 text-slate-400 hover:text-red-600 disabled:opacity-50"
+                    >
+                      <X className="w-5 h-5" />
+                    </button>
+                  </div>
+                  <div className="space-y-1">
+                    <Label className="text-xs text-slate-500">Description</Label>
+                    <Input
+                      value={item.description}
+                      onChange={(e) =>
+                        updateLineItem(item.id, "description", e.target.value)
+                      }
+                      placeholder="Service or product"
+                      required
+                    />
+                  </div>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="space-y-1">
+                      <Label className="text-xs text-slate-500">Qty</Label>
+                      <Input
+                        type="text"
+                        inputMode="numeric"
+                        value={item.quantity}
+                        onChange={(e) =>
+                          updateLineItem(item.id, "quantity", e.target.value)
+                        }
+                        required
+                      />
+                    </div>
+                    <div className="space-y-1">
+                      <Label className="text-xs text-slate-500">Price</Label>
+                      <Input
+                        type="text"
+                        inputMode="decimal"
+                        value={item.unitPrice}
+                        onChange={(e) =>
+                          updateLineItem(item.id, "unitPrice", e.target.value)
+                        }
+                        placeholder="0.00"
+                      />
+                    </div>
+                  </div>
+                  <div className="text-right font-medium text-slate-900">
+                    Total: {formatCurrency(parseNum(item.quantity) * parseNum(item.unitPrice))}
+                  </div>
+                </div>
+
+                {/* Desktop: grid row */}
+                <div className="hidden md:grid md:grid-cols-12 gap-4 items-center">
+                  <div className="col-span-5">
+                    <Input
+                      value={item.description}
+                      onChange={(e) =>
+                        updateLineItem(item.id, "description", e.target.value)
+                      }
+                      placeholder="Service or product description"
+                      required
+                    />
+                  </div>
+                  <div className="col-span-2">
+                    <Input
+                      type="text"
+                      inputMode="numeric"
+                      value={item.quantity}
+                      onChange={(e) =>
+                        updateLineItem(item.id, "quantity", e.target.value)
+                      }
+                      required
+                    />
+                  </div>
+                  <div className="col-span-2">
+                    <Input
+                      type="text"
+                      inputMode="decimal"
+                      value={item.unitPrice}
+                      onChange={(e) =>
+                        updateLineItem(item.id, "unitPrice", e.target.value)
+                      }
+                      placeholder="0.00"
+                    />
+                  </div>
+                  <div className="col-span-2 font-medium tabular-nums">
+                    {formatCurrency(parseNum(item.quantity) * parseNum(item.unitPrice))}
+                  </div>
+                  <div className="col-span-1">
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => removeLineItem(item.id)}
+                      disabled={lineItems.length === 1}
+                      className="text-slate-400 hover:text-red-600"
+                    >
+                      <X className="w-4 h-4" />
+                    </Button>
+                  </div>
                 </div>
               </div>
-              <div className="col-span-1">
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  onClick={() => removeLineItem(item.id)}
-                  disabled={lineItems.length === 1}
-                >
-                  X
-                </Button>
-              </div>
-            </div>
-          ))}
-          <Button type="button" variant="outline" onClick={addLineItem}>
-            + Add Line Item
+            ))}
+          </div>
+
+          <Button type="button" variant="outline" onClick={addLineItem} className="w-full md:w-auto">
+            <Plus className="w-4 h-4 mr-2" />
+            Add Line Item
           </Button>
+
           <div className="flex justify-end pt-4 border-t">
             <div className="text-xl font-bold">
               Total: {formatCurrency(total)}
             </div>
           </div>
-        </CardContent>
-      </Card>
+        </div>
+      </section>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Notes</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <Textarea
-            value={notes}
-            onChange={(e) => setNotes(e.target.value)}
-            placeholder="Payment terms, additional notes..."
-            rows={3}
-          />
-        </CardContent>
-      </Card>
+      <section className="bg-white shadow-sm ring-1 ring-slate-900/5 rounded-lg p-6">
+        <h2 className="text-sm font-medium text-slate-500 uppercase tracking-wide mb-4">
+          Notes <span className="normal-case font-normal">(optional)</span>
+        </h2>
+        <Textarea
+          value={notes}
+          onChange={(e) => setNotes(e.target.value)}
+          placeholder="Payment terms, additional notes..."
+          rows={3}
+        />
+      </section>
 
-      <div className="flex gap-4">
-        <Button type="submit" disabled={isSubmitting}>
-          {isSubmitting
-            ? "Saving..."
-            : invoice
-            ? "Update Invoice"
-            : "Create Invoice"}
-        </Button>
-        <Button type="button" variant="outline" asChild>
+      <div className="flex flex-col-reverse md:flex-row gap-4">
+        <Button type="button" variant="outline" asChild className="md:order-1">
           <Link href="/">Cancel</Link>
+        </Button>
+        <Button type="submit" disabled={isSubmitting} className="bg-blue-600 hover:bg-blue-700 text-white md:order-2">
+          {isSubmitting ? "Saving..." : invoice ? "Update Invoice" : "Create Invoice"}
         </Button>
       </div>
     </form>
