@@ -7,11 +7,34 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+model Client {
+  id          String    @id @default(cuid())
+  name        String
+  email       String    @unique
+  companyName String?
+  phone       String?
+  address     String?
+  archivedAt  DateTime?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  invoices    Invoice[]
+}
+
 model Invoice {
   id            String     @id @default(cuid())
   invoiceNumber String     @unique
-  clientName    String
-  clientEmail   String
+
+  // Reference to client (nullable for migration safety)
+  clientId           String?
+  client             Client?   @relation(fields: [clientId], references: [id])
+
+  // Snapshot fields (copied from client at invoice creation)
+  clientName         String
+  clientEmail        String
+  clientCompanyName  String?
+  clientPhone        String?
+  clientAddress      String?
+
   status        String     @default("draft") // draft, sent, paid
   issueDate     DateTime   @default(now())
   dueDate       DateTime
