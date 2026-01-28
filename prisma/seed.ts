@@ -3,7 +3,65 @@ import { PrismaClient } from '@prisma/client';
 const prisma = new PrismaClient();
 
 async function main() {
-  console.log('Seeding demo invoices...');
+  console.log('Seeding clients and invoices...');
+
+  // Create clients first
+  const clientsData = [
+    {
+      name: 'Acme Corp',
+      email: 'billing@acme.com',
+      companyName: 'Acme Corporation',
+      phone: '+1-555-123-4567',
+      address: '123 Business Ave\nSan Francisco, CA 94107',
+    },
+    {
+      name: 'Globex Ltd',
+      email: 'accounts@globex.com',
+      companyName: 'Globex Limited',
+      phone: '+1-555-234-5678',
+      address: '456 Commerce St\nNew York, NY 10001',
+    },
+    {
+      name: 'Initech',
+      email: 'finance@initech.com',
+      companyName: 'Initech Inc',
+      phone: '+1-555-345-6789',
+      address: '789 Tech Park\nAustin, TX 78701',
+    },
+    {
+      name: 'Umbrella Inc',
+      email: 'ap@umbrella.com',
+      companyName: 'Umbrella Corporation',
+      phone: '+1-555-456-7890',
+      address: '321 Corporate Blvd\nRacoon City, RC 12345',
+    },
+    {
+      name: 'Sterling Partners',
+      email: 'invoices@sterling.com',
+      companyName: 'Sterling & Partners LLP',
+      phone: '+1-555-567-8901',
+      address: '555 Madison Ave\nNew York, NY 10022',
+    },
+    {
+      name: 'Northwind Traders',
+      email: 'billing@northwind.com',
+      companyName: 'Northwind Traders Inc',
+      phone: '+1-555-678-9012',
+      address: '888 Trade Center\nSeattle, WA 98101',
+    },
+  ];
+
+  // Create or update clients
+  const clients: Record<string, string> = {};
+  for (const clientData of clientsData) {
+    const client = await prisma.client.upsert({
+      where: { email: clientData.email },
+      update: clientData,
+      create: clientData,
+    });
+    clients[clientData.name] = client.id;
+    console.log(`Created/updated client: ${client.name}`);
+  }
 
   // Get next invoice number
   const lastInvoice = await prisma.invoice.findFirst({
@@ -18,7 +76,6 @@ async function main() {
   const invoices = [
     {
       clientName: 'Acme Corp',
-      clientEmail: 'billing@acme.com',
       status: 'paid',
       daysAgo: 20,
       dueDaysAgo: 10,
@@ -29,7 +86,6 @@ async function main() {
     },
     {
       clientName: 'Globex Ltd',
-      clientEmail: 'accounts@globex.com',
       status: 'paid',
       daysAgo: 15,
       dueDaysAgo: 5,
@@ -40,7 +96,6 @@ async function main() {
     },
     {
       clientName: 'Initech',
-      clientEmail: 'finance@initech.com',
       status: 'sent',
       daysAgo: 5,
       dueDaysFromNow: 25,
@@ -51,7 +106,6 @@ async function main() {
     },
     {
       clientName: 'Umbrella Inc',
-      clientEmail: 'ap@umbrella.com',
       status: 'sent',
       daysAgo: 14,
       dueDaysAgo: 4, // overdue
@@ -61,7 +115,6 @@ async function main() {
     },
     {
       clientName: 'Sterling Partners',
-      clientEmail: 'invoices@sterling.com',
       status: 'draft',
       daysAgo: 2,
       dueDaysFromNow: 28,
@@ -72,7 +125,6 @@ async function main() {
     },
     {
       clientName: 'Northwind Traders',
-      clientEmail: 'billing@northwind.com',
       status: 'draft',
       daysAgo: 1,
       dueDaysFromNow: 30,
@@ -96,11 +148,24 @@ async function main() {
       dueDate.setDate(dueDate.getDate() + inv.dueDaysFromNow);
     }
 
+    // Find the client data for snapshot
+    const clientData = clientsData.find((c) => c.name === inv.clientName);
+    const clientId = clients[inv.clientName];
+
+    if (!clientData || !clientId) {
+      console.error(`Client not found: ${inv.clientName}`);
+      continue;
+    }
+
     await prisma.invoice.create({
       data: {
         invoiceNumber,
-        clientName: inv.clientName,
-        clientEmail: inv.clientEmail,
+        clientId,
+        clientName: clientData.name,
+        clientEmail: clientData.email,
+        clientCompanyName: clientData.companyName,
+        clientPhone: clientData.phone,
+        clientAddress: clientData.address,
         status: inv.status,
         issueDate,
         dueDate,
