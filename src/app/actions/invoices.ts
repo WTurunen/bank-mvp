@@ -11,8 +11,12 @@ export type LineItemInput = {
 };
 
 export type InvoiceInput = {
+  clientId?: string;
   clientName: string;
   clientEmail: string;
+  clientCompanyName?: string | null;
+  clientPhone?: string | null;
+  clientAddress?: string | null;
   dueDate: string;
   notes?: string;
   lineItems: LineItemInput[];
@@ -29,8 +33,12 @@ export async function createInvoice(data: InvoiceInput) {
   const invoice = await db.invoice.create({
     data: {
       invoiceNumber,
+      clientId: data.clientId,
       clientName: data.clientName,
       clientEmail: data.clientEmail,
+      clientCompanyName: data.clientCompanyName,
+      clientPhone: data.clientPhone,
+      clientAddress: data.clientAddress,
       dueDate: new Date(data.dueDate),
       notes: data.notes || null,
       lineItems: {
@@ -53,8 +61,12 @@ export async function updateInvoice(id: string, data: InvoiceInput) {
   await db.invoice.update({
     where: { id },
     data: {
+      clientId: data.clientId,
       clientName: data.clientName,
       clientEmail: data.clientEmail,
+      clientCompanyName: data.clientCompanyName,
+      clientPhone: data.clientPhone,
+      clientAddress: data.clientAddress,
       dueDate: new Date(data.dueDate),
       notes: data.notes || null,
       lineItems: {
