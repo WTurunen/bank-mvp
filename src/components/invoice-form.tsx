@@ -16,6 +16,7 @@ import {
   validateHasCompleteLineItem,
   VALIDATION_MESSAGES,
 } from "@/lib/validation";
+import { ClientSelector } from "@/components/client-selector";
 
 // Only allow digits, comma, and dot
 const isValidNumericInput = (value: string) => /^[\d.,]*$/.test(value);
@@ -34,10 +35,23 @@ type LineItem = {
   unitPrice: string;
 };
 
+type Client = {
+  id: string;
+  name: string;
+  email: string;
+  companyName: string | null;
+  phone: string | null;
+  address: string | null;
+};
+
 type InvoiceProp = {
   id: string;
+  clientId?: string | null;
   clientName: string;
   clientEmail: string;
+  clientCompanyName?: string | null;
+  clientPhone?: string | null;
+  clientAddress?: string | null;
   dueDate: Date;
   notes: string | null;
   lineItems: { id: string; description: string; quantity: number; unitPrice: number }[];
@@ -45,15 +59,36 @@ type InvoiceProp = {
 
 type Props = {
   invoice?: InvoiceProp;
+  clients?: Client[];
 };
 
 // Calculate default due date outside component to avoid React purity rule violation
 const getDefaultDueDate = () =>
   new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split("T")[0];
 
-export function InvoiceForm({ invoice }: Props) {
-  const [clientName, setClientName] = useState(invoice?.clientName ?? "");
-  const [clientEmail, setClientEmail] = useState(invoice?.clientEmail ?? "");
+export function InvoiceForm({ invoice, clients }: Props) {
+  // Client selection state
+  const [selectedClientId, setSelectedClientId] = useState<string | undefined>(
+    invoice?.clientId ?? undefined
+  );
+  const [clientSnapshot, setClientSnapshot] = useState<{
+    name: string;
+    email: string;
+    companyName: string | null;
+    phone: string | null;
+    address: string | null;
+  } | null>(
+    invoice
+      ? {
+          name: invoice.clientName,
+          email: invoice.clientEmail,
+          companyName: invoice.clientCompanyName ?? null,
+          phone: invoice.clientPhone ?? null,
+          address: invoice.clientAddress ?? null,
+        }
+      : null
+  );
+
   const [dueDate, setDueDate] = useState(() =>
     invoice?.dueDate
       ? new Date(invoice.dueDate).toISOString().split("T")[0]
@@ -73,6 +108,18 @@ export function InvoiceForm({ invoice }: Props) {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const router = useRouter();
+
+  const handleClientSelect = (client: Client) => {
+    setSelectedClientId(client.id);
+    setClientSnapshot({
+      name: client.name,
+      email: client.email,
+      companyName: client.companyName,
+      phone: client.phone,
+      address: client.address,
+    });
+    setError(null);
+  };
 
   const addLineItem = () => {
     setLineItems([
@@ -108,6 +155,12 @@ export function InvoiceForm({ invoice }: Props) {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
+
+    // Validate client selection when clients are provided
+    if (clients && !selectedClientId) {
+      setError("Please select a client for this invoice.");
+      return;
+    }
 
     // Validate all numeric fields using centralized validation
     for (const item of lineItems) {
@@ -156,8 +209,12 @@ export function InvoiceForm({ invoice }: Props) {
 
     try {
       const data = {
-        clientName,
-        clientEmail,
+        clientId: selectedClientId,
+        clientName: clientSnapshot?.name ?? "",
+        clientEmail: clientSnapshot?.email ?? "",
+        clientCompanyName: clientSnapshot?.companyName ?? null,
+        clientPhone: clientSnapshot?.phone ?? null,
+        clientAddress: clientSnapshot?.address ?? null,
         dueDate,
         notes,
         lineItems: lineItems.map((item) => ({
@@ -199,27 +256,52 @@ export function InvoiceForm({ invoice }: Props) {
           Client Information
         </h2>
         <div className="space-y-4">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="clientName">Client Name <span className="text-slate-400 font-normal">(required)</span></Label>
-              <Input
-                id="clientName"
-                value={clientName}
-                onChange={(e) => setClientName(e.target.value)}
-                required
-              />
+          {clients ? (
+            <>
+              <div className="space-y-2">
+                <Label>Client <span className="text-slate-400 font-normal">(required)</span></Label>
+                <ClientSelector
+                  clients={clients}
+                  onSelect={handleClientSelect}
+                  value={selectedClientId}
+                />
+              </div>
+            </>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="clientName">Client Name <span className="text-slate-400 font-normal">(required)</span></Label>
+                <Input
+                  id="clientName"
+                  value={clientSnapshot?.name ?? ""}
+                  onChange={(e) => setClientSnapshot(prev => ({
+                    name: e.target.value,
+                    email: prev?.email ?? "",
+                    companyName: prev?.companyName ?? null,
+                    phone: prev?.phone ?? null,
+                    address: prev?.address ?? null,
+                  }))}
+                  required
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="clientEmail">Client Email <span className="text-slate-400 font-normal">(required)</span></Label>
+                <Input
+                  id="clientEmail"
+                  type="email"
+                  value={clientSnapshot?.email ?? ""}
+                  onChange={(e) => setClientSnapshot(prev => ({
+                    name: prev?.name ?? "",
+                    email: e.target.value,
+                    companyName: prev?.companyName ?? null,
+                    phone: prev?.phone ?? null,
+                    address: prev?.address ?? null,
+                  }))}
+                  required
+                />
+              </div>
             </div>
-            <div className="space-y-2">
-              <Label htmlFor="clientEmail">Client Email <span className="text-slate-400 font-normal">(required)</span></Label>
-              <Input
-                id="clientEmail"
-                type="email"
-                value={clientEmail}
-                onChange={(e) => setClientEmail(e.target.value)}
-                required
-              />
-            </div>
-          </div>
+          )}
           <div className="space-y-2">
             <Label htmlFor="dueDate">Due Date <span className="text-slate-400 font-normal">(required)</span></Label>
             <Input

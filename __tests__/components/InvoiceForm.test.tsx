@@ -28,6 +28,26 @@ vi.mock('@/app/actions/invoices', () => ({
   updateInvoice: (...args: unknown[]) => mockUpdateInvoice(...args),
 }))
 
+// Test clients for client selector
+const mockClients = [
+  {
+    id: 'client-1',
+    name: 'Acme Corp',
+    email: 'acme@example.com',
+    companyName: 'Acme Corporation',
+    phone: '+1-555-123-4567',
+    address: '123 Main St',
+  },
+  {
+    id: 'client-2',
+    name: 'Globex Ltd',
+    email: 'globex@example.com',
+    companyName: null,
+    phone: null,
+    address: null,
+  },
+]
+
 describe('InvoiceForm', () => {
   beforeEach(() => {
     vi.clearAllMocks()
@@ -35,28 +55,32 @@ describe('InvoiceForm', () => {
 
   describe('rendering', () => {
     it('shows all required fields for new invoice', () => {
-      render(<InvoiceForm />)
+      render(<InvoiceForm clients={mockClients} />)
 
-      expect(screen.getByLabelText(/client name/i)).toBeInTheDocument()
-      expect(screen.getByLabelText(/client email/i)).toBeInTheDocument()
+      expect(screen.getByRole('combobox')).toBeInTheDocument() // Client selector
       expect(screen.getByLabelText(/due date/i)).toBeInTheDocument()
       expect(screen.getByText(/line items/i)).toBeInTheDocument()
       expect(screen.getByText(/notes/i)).toBeInTheDocument()
       expect(screen.getByRole('button', { name: /create invoice/i })).toBeInTheDocument()
     })
 
-    it('shows empty form for new invoice', () => {
-      render(<InvoiceForm />)
+    it('shows client selector with placeholder for new invoice', () => {
+      render(<InvoiceForm clients={mockClients} />)
 
-      expect(screen.getByLabelText(/client name/i)).toHaveValue('')
-      expect(screen.getByLabelText(/client email/i)).toHaveValue('')
+      const select = screen.getByRole('combobox')
+      expect(select).toHaveValue('')
+      expect(screen.getByText(/select a client/i)).toBeInTheDocument()
     })
 
     it('pre-fills data when editing existing invoice', () => {
       const existingInvoice = {
         id: 'test-id',
+        clientId: 'client-1',
         clientName: 'Acme Corp',
-        clientEmail: 'billing@acme.com',
+        clientEmail: 'acme@example.com',
+        clientCompanyName: 'Acme Corporation',
+        clientPhone: '+1-555-123-4567',
+        clientAddress: '123 Main St',
         dueDate: new Date('2026-02-28'),
         notes: 'Net 30',
         lineItems: [
@@ -64,24 +88,26 @@ describe('InvoiceForm', () => {
         ],
       }
 
-      render(<InvoiceForm invoice={existingInvoice} />)
+      render(<InvoiceForm clients={mockClients} invoice={existingInvoice} />)
 
-      expect(screen.getByLabelText(/client name/i)).toHaveValue('Acme Corp')
-      expect(screen.getByLabelText(/client email/i)).toHaveValue('billing@acme.com')
+      // Client should be pre-selected
+      const select = screen.getByRole('combobox')
+      expect(select).toHaveValue('client-1')
       expect(screen.getByRole('button', { name: /update invoice/i })).toBeInTheDocument()
     })
 
     it('shows Update Invoice button when editing', () => {
       const existingInvoice = {
         id: 'test-id',
-        clientName: 'Test',
-        clientEmail: 'test@test.com',
+        clientId: 'client-1',
+        clientName: 'Acme Corp',
+        clientEmail: 'acme@example.com',
         dueDate: new Date(),
         notes: null,
         lineItems: [{ id: 'item-1', description: 'Test', quantity: 1, unitPrice: 100 }],
       }
 
-      render(<InvoiceForm invoice={existingInvoice} />)
+      render(<InvoiceForm clients={mockClients} invoice={existingInvoice} />)
 
       expect(screen.getByRole('button', { name: /update invoice/i })).toBeInTheDocument()
       expect(screen.queryByRole('button', { name: /create invoice/i })).not.toBeInTheDocument()
@@ -91,7 +117,7 @@ describe('InvoiceForm', () => {
   describe('line items', () => {
     it('can add a new line item', async () => {
       const user = userEvent.setup()
-      render(<InvoiceForm />)
+      render(<InvoiceForm clients={mockClients} />)
 
       // Note: 2 inputs per line item (mobile + desktop views)
       const descriptionInputs = screen.getAllByPlaceholderText(/service or product/i)
@@ -105,7 +131,7 @@ describe('InvoiceForm', () => {
 
     it('can remove a line item when multiple exist', async () => {
       const user = userEvent.setup()
-      render(<InvoiceForm />)
+      render(<InvoiceForm clients={mockClients} />)
 
       // Add a second line item (2 inputs per line item: mobile + desktop)
       await user.click(screen.getByRole('button', { name: /add line item/i }))
@@ -119,7 +145,7 @@ describe('InvoiceForm', () => {
     })
 
     it('cannot remove the last line item', async () => {
-      render(<InvoiceForm />)
+      render(<InvoiceForm clients={mockClients} />)
 
       const removeButtons = screen.getAllByRole('button', { name: /remove line item/i })
       // Both mobile and desktop remove buttons should be disabled
@@ -128,7 +154,7 @@ describe('InvoiceForm', () => {
 
     it('updates totals when values change', async () => {
       const user = userEvent.setup()
-      render(<InvoiceForm />)
+      render(<InvoiceForm clients={mockClients} />)
 
       // Find quantity and price inputs (use first of each - mobile/desktop duplicates)
       const quantityInputs = screen.getAllByDisplayValue('1')
@@ -147,12 +173,13 @@ describe('InvoiceForm', () => {
   describe('validation display', () => {
     it('shows error when submitting without valid line items', async () => {
       const user = userEvent.setup()
-      render(<InvoiceForm />)
+      render(<InvoiceForm clients={mockClients} />)
 
-      // Fill all HTML5 required fields, but leave price at 0 (which fails business validation)
-      await user.type(screen.getByLabelText(/client name/i), 'Test Client')
-      await user.type(screen.getByLabelText(/client email/i), 'test@example.com')
-      // Fill description to pass HTML5 required, but leave price empty (defaults to 0)
+      // Select a client
+      const select = screen.getByRole('combobox')
+      await user.selectOptions(select, 'client-1')
+
+      // Fill description but leave price at 0 (which fails business validation)
       const descInputs = screen.getAllByPlaceholderText(/service or product/i)
       await user.type(descInputs[0], 'Some service')
 
@@ -165,11 +192,12 @@ describe('InvoiceForm', () => {
 
     it('clears error when user starts typing', async () => {
       const user = userEvent.setup()
-      render(<InvoiceForm />)
+      render(<InvoiceForm clients={mockClients} />)
 
-      // Fill all HTML5 required fields, but leave price at 0
-      await user.type(screen.getByLabelText(/client name/i), 'Test Client')
-      await user.type(screen.getByLabelText(/client email/i), 'test@example.com')
+      // Select a client
+      const select = screen.getByRole('combobox')
+      await user.selectOptions(select, 'client-1')
+
       const descInputs = screen.getAllByPlaceholderText(/service or product/i)
       await user.type(descInputs[0], 'Some service')
 
@@ -189,7 +217,7 @@ describe('InvoiceForm', () => {
 
     it('rejects invalid characters in numeric fields', async () => {
       const user = userEvent.setup()
-      render(<InvoiceForm />)
+      render(<InvoiceForm clients={mockClients} />)
 
       const priceInputs = screen.getAllByPlaceholderText('0.00')
 
@@ -201,7 +229,7 @@ describe('InvoiceForm', () => {
 
     it('accepts valid numeric input with comma', async () => {
       const user = userEvent.setup()
-      render(<InvoiceForm />)
+      render(<InvoiceForm clients={mockClients} />)
 
       const priceInputs = screen.getAllByPlaceholderText('0.00')
 
@@ -215,10 +243,11 @@ describe('InvoiceForm', () => {
     it('calls createInvoice with form data when valid', async () => {
       const user = userEvent.setup()
       mockCreateInvoice.mockResolvedValue('new-invoice-id')
-      render(<InvoiceForm />)
+      render(<InvoiceForm clients={mockClients} />)
 
-      await user.type(screen.getByLabelText(/client name/i), 'Test Client')
-      await user.type(screen.getByLabelText(/client email/i), 'test@example.com')
+      // Select client
+      const select = screen.getByRole('combobox')
+      await user.selectOptions(select, 'client-1')
 
       const descInputs = screen.getAllByPlaceholderText(/service or product/i)
       await user.type(descInputs[0], 'Web Development')
@@ -234,8 +263,9 @@ describe('InvoiceForm', () => {
 
       expect(mockCreateInvoice).toHaveBeenCalledWith(
         expect.objectContaining({
-          clientName: 'Test Client',
-          clientEmail: 'test@example.com',
+          clientId: 'client-1',
+          clientName: 'Acme Corp',
+          clientEmail: 'acme@example.com',
           lineItems: expect.arrayContaining([
             expect.objectContaining({
               description: 'Web Development',
@@ -249,10 +279,11 @@ describe('InvoiceForm', () => {
     it('redirects to new invoice after creation', async () => {
       const user = userEvent.setup()
       mockCreateInvoice.mockResolvedValue('new-invoice-id')
-      render(<InvoiceForm />)
+      render(<InvoiceForm clients={mockClients} />)
 
-      await user.type(screen.getByLabelText(/client name/i), 'Test Client')
-      await user.type(screen.getByLabelText(/client email/i), 'test@example.com')
+      // Select client
+      const select = screen.getByRole('combobox')
+      await user.selectOptions(select, 'client-1')
 
       const descInputs = screen.getAllByPlaceholderText(/service or product/i)
       await user.type(descInputs[0], 'Service')
@@ -273,19 +304,19 @@ describe('InvoiceForm', () => {
 
       const existingInvoice = {
         id: 'existing-id',
-        clientName: 'Old Client',
-        clientEmail: 'old@example.com',
+        clientId: 'client-1',
+        clientName: 'Acme Corp',
+        clientEmail: 'acme@example.com',
         dueDate: new Date('2026-02-28'),
         notes: null,
         lineItems: [{ id: 'item-1', description: 'Old Service', quantity: 1, unitPrice: 100 }],
       }
 
-      render(<InvoiceForm invoice={existingInvoice} />)
+      render(<InvoiceForm clients={mockClients} invoice={existingInvoice} />)
 
-      // Update client name
-      const nameInput = screen.getByLabelText(/client name/i)
-      await user.clear(nameInput)
-      await user.type(nameInput, 'New Client')
+      // Change to different client
+      const select = screen.getByRole('combobox')
+      await user.selectOptions(select, 'client-2')
 
       await user.click(screen.getByRole('button', { name: /update invoice/i }))
 
@@ -296,7 +327,8 @@ describe('InvoiceForm', () => {
       expect(mockUpdateInvoice).toHaveBeenCalledWith(
         'existing-id',
         expect.objectContaining({
-          clientName: 'New Client',
+          clientId: 'client-2',
+          clientName: 'Globex Ltd',
         })
       )
     })
@@ -307,14 +339,15 @@ describe('InvoiceForm', () => {
 
       const existingInvoice = {
         id: 'existing-id',
-        clientName: 'Client',
-        clientEmail: 'client@example.com',
+        clientId: 'client-1',
+        clientName: 'Acme Corp',
+        clientEmail: 'acme@example.com',
         dueDate: new Date(),
         notes: null,
         lineItems: [{ id: 'item-1', description: 'Service', quantity: 1, unitPrice: 100 }],
       }
 
-      render(<InvoiceForm invoice={existingInvoice} />)
+      render(<InvoiceForm clients={mockClients} invoice={existingInvoice} />)
 
       await user.click(screen.getByRole('button', { name: /update invoice/i }))
 
@@ -325,12 +358,11 @@ describe('InvoiceForm', () => {
 
     it('prevents submission when validation fails', async () => {
       const user = userEvent.setup()
-      render(<InvoiceForm />)
+      render(<InvoiceForm clients={mockClients} />)
 
-      // Fill only some fields
-      await user.type(screen.getByLabelText(/client name/i), 'Test')
-      await user.type(screen.getByLabelText(/client email/i), 'test@test.com')
-      // Don't fill line items
+      // Select a client but don't fill line items
+      const select = screen.getByRole('combobox')
+      await user.selectOptions(select, 'client-1')
 
       await user.click(screen.getByRole('button', { name: /create invoice/i }))
 
@@ -341,10 +373,11 @@ describe('InvoiceForm', () => {
       const user = userEvent.setup()
       mockCreateInvoice.mockRejectedValue(new Error('Server error'))
 
-      render(<InvoiceForm />)
+      render(<InvoiceForm clients={mockClients} />)
 
-      await user.type(screen.getByLabelText(/client name/i), 'Test')
-      await user.type(screen.getByLabelText(/client email/i), 'test@test.com')
+      // Select a client
+      const select = screen.getByRole('combobox')
+      await user.selectOptions(select, 'client-1')
 
       const descInputs = screen.getAllByPlaceholderText(/service or product/i)
       await user.type(descInputs[0], 'Service')
@@ -356,6 +389,126 @@ describe('InvoiceForm', () => {
 
       await waitFor(() => {
         expect(screen.getByText(/server error/i)).toBeInTheDocument()
+      })
+    })
+  })
+
+  describe('client selector integration', () => {
+    it('shows client selector instead of text inputs when clients provided', () => {
+      render(<InvoiceForm clients={mockClients} />)
+
+      // Should have client selector
+      expect(screen.getByRole('combobox')).toBeInTheDocument()
+      expect(screen.getByText(/select a client/i)).toBeInTheDocument()
+
+      // Should NOT have free-text client inputs
+      expect(screen.queryByLabelText(/client name/i)).not.toBeInTheDocument()
+      expect(screen.queryByLabelText(/client email/i)).not.toBeInTheDocument()
+    })
+
+    it('shows client details after selection', async () => {
+      const user = userEvent.setup()
+      render(<InvoiceForm clients={mockClients} />)
+
+      const select = screen.getByRole('combobox')
+      await user.selectOptions(select, 'client-1')
+
+      // Should show selected client info
+      expect(screen.getByText('Acme Corporation')).toBeInTheDocument()
+      expect(screen.getByText('acme@example.com')).toBeInTheDocument()
+    })
+
+    it('submits invoice with clientId and snapshot data', async () => {
+      const user = userEvent.setup()
+      mockCreateInvoice.mockResolvedValue('new-invoice-id')
+      render(<InvoiceForm clients={mockClients} />)
+
+      // Select client
+      const select = screen.getByRole('combobox')
+      await user.selectOptions(select, 'client-1')
+
+      // Fill line item
+      const descInputs = screen.getAllByPlaceholderText(/service or product/i)
+      await user.type(descInputs[0], 'Consulting')
+
+      const priceInputs = screen.getAllByPlaceholderText('0.00')
+      await user.type(priceInputs[0], '500')
+
+      await user.click(screen.getByRole('button', { name: /create invoice/i }))
+
+      await waitFor(() => {
+        expect(mockCreateInvoice).toHaveBeenCalledTimes(1)
+      })
+
+      expect(mockCreateInvoice).toHaveBeenCalledWith(
+        expect.objectContaining({
+          clientId: 'client-1',
+          clientName: 'Acme Corp',
+          clientEmail: 'acme@example.com',
+          clientCompanyName: 'Acme Corporation',
+          clientPhone: '+1-555-123-4567',
+          clientAddress: '123 Main St',
+        })
+      )
+    })
+
+    it('requires client selection before submit', async () => {
+      const user = userEvent.setup()
+      render(<InvoiceForm clients={mockClients} />)
+
+      // Fill line item but don't select client
+      const descInputs = screen.getAllByPlaceholderText(/service or product/i)
+      await user.type(descInputs[0], 'Service')
+
+      const priceInputs = screen.getAllByPlaceholderText('0.00')
+      await user.type(priceInputs[0], '100')
+
+      await user.click(screen.getByRole('button', { name: /create invoice/i }))
+
+      // Should show error about client selection (in the error div, not the select option)
+      await waitFor(() => {
+        expect(screen.getByText(/please select a client/i)).toBeInTheDocument()
+      })
+
+      expect(mockCreateInvoice).not.toHaveBeenCalled()
+    })
+
+    it('shows link to create new client', () => {
+      render(<InvoiceForm clients={mockClients} />)
+
+      const link = screen.getByRole('link', { name: /create.*client/i })
+      expect(link).toHaveAttribute('href', '/clients/new')
+    })
+
+    it('handles clients with null optional fields in snapshot', async () => {
+      const user = userEvent.setup()
+      mockCreateInvoice.mockResolvedValue('new-invoice-id')
+      render(<InvoiceForm clients={mockClients} />)
+
+      // Select client with null fields
+      const select = screen.getByRole('combobox')
+      await user.selectOptions(select, 'client-2')
+
+      // Fill line item
+      const descInputs = screen.getAllByPlaceholderText(/service or product/i)
+      await user.type(descInputs[0], 'Service')
+
+      const priceInputs = screen.getAllByPlaceholderText('0.00')
+      await user.type(priceInputs[0], '100')
+
+      await user.click(screen.getByRole('button', { name: /create invoice/i }))
+
+      await waitFor(() => {
+        expect(mockCreateInvoice).toHaveBeenCalledWith(
+          expect.objectContaining({
+            clientId: 'client-2',
+            clientName: 'Globex Ltd',
+            clientEmail: 'globex@example.com',
+            clientCompanyName: null,
+            clientPhone: null,
+            clientAddress: null,
+          })
+        )
       })
     })
   })
