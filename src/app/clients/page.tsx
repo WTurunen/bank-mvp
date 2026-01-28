@@ -24,7 +24,7 @@ type Client = {
   phone: string | null;
   address: string | null;
   archivedAt: Date | null;
-  invoices: { id: string }[];
+  _count: { invoices: number };
 };
 
 export default function ClientsPage() {
@@ -32,21 +32,34 @@ export default function ClientsPage() {
   const [searchQuery, setSearchQuery] = useState("");
   const [showArchived, setShowArchived] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
-    async function loadClients() {
-      setIsLoading(true);
+  const loadClients = async () => {
+    setIsLoading(true);
+    setError(null);
+    try {
       const data = await getClients(showArchived);
       setClients(data);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to load clients");
+    } finally {
       setIsLoading(false);
     }
+  };
+
+  useEffect(() => {
     loadClients();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [showArchived]);
 
   const handleRestore = async (id: string) => {
     await restoreClient(id);
     const data = await getClients(showArchived);
     setClients(data);
+  };
+
+  const handleRetry = () => {
+    loadClients();
   };
 
   const filteredClients = clients.filter((client) => {
@@ -99,7 +112,16 @@ export default function ClientsPage() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {isLoading ? (
+              {error ? (
+                <TableRow>
+                  <TableCell colSpan={6} className="text-center py-8">
+                    <div className="text-red-600 mb-2">{error}</div>
+                    <Button variant="outline" onClick={handleRetry}>
+                      Retry
+                    </Button>
+                  </TableCell>
+                </TableRow>
+              ) : isLoading ? (
                 <TableRow>
                   <TableCell colSpan={6} className="text-center text-slate-500 py-8">
                     Loading...
@@ -138,7 +160,7 @@ export default function ClientsPage() {
                     <TableCell>{client.companyName ?? "—"}</TableCell>
                     <TableCell>{client.email}</TableCell>
                     <TableCell>{client.phone ?? "—"}</TableCell>
-                    <TableCell>{client.invoices.length}</TableCell>
+                    <TableCell>{client._count.invoices}</TableCell>
                     <TableCell className="text-right space-x-2">
                       <Link href={`/clients/${client.id}`}>
                         <Button variant="outline" size="sm">
