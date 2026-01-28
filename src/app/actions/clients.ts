@@ -12,34 +12,60 @@ export type ClientInput = {
 };
 
 export async function createClient(data: ClientInput): Promise<string> {
-  const client = await db.client.create({
-    data: {
-      name: data.name,
-      email: data.email,
-      companyName: data.companyName,
-      phone: data.phone,
-      address: data.address,
-    },
-  });
+  try {
+    const client = await db.client.create({
+      data: {
+        name: data.name,
+        email: data.email,
+        companyName: data.companyName,
+        phone: data.phone,
+        address: data.address,
+      },
+    });
 
-  revalidatePath("/clients");
-  return client.id;
+    revalidatePath("/clients");
+    return client.id;
+  } catch (error: unknown) {
+    // Handle Prisma unique constraint violation
+    if (
+      error &&
+      typeof error === "object" &&
+      "code" in error &&
+      error.code === "P2002"
+    ) {
+      throw new Error("A client with this email already exists");
+    }
+    throw error;
+  }
 }
 
 export async function updateClient(id: string, data: ClientInput) {
-  await db.client.update({
-    where: { id },
-    data: {
-      name: data.name,
-      email: data.email,
-      companyName: data.companyName,
-      phone: data.phone,
-      address: data.address,
-    },
-  });
+  try {
+    await db.client.update({
+      where: { id },
+      data: {
+        name: data.name,
+        email: data.email,
+        companyName: data.companyName,
+        phone: data.phone,
+        address: data.address,
+      },
+    });
 
-  revalidatePath("/clients");
-  revalidatePath(`/clients/${id}`);
+    revalidatePath("/clients");
+    revalidatePath(`/clients/${id}`);
+  } catch (error: unknown) {
+    // Handle Prisma unique constraint violation
+    if (
+      error &&
+      typeof error === "object" &&
+      "code" in error &&
+      error.code === "P2002"
+    ) {
+      throw new Error("A client with this email already exists");
+    }
+    throw error;
+  }
 }
 
 export async function archiveClient(id: string) {
@@ -72,7 +98,7 @@ export async function getClient(id: string) {
 export async function getClients(includeArchived = false) {
   return db.client.findMany({
     where: includeArchived ? {} : { archivedAt: null },
-    include: { invoices: true },
+    include: { _count: { select: { invoices: true } } },
     orderBy: { name: "asc" },
   });
 }
