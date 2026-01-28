@@ -15,7 +15,6 @@ const mockClients = [
     id: 'client-1',
     name: 'Acme Corp',
     email: 'acme@example.com',
-    companyName: 'Acme Corporation',
     phone: '+1-555-123-4567',
     address: '123 Main St',
   },
@@ -23,7 +22,6 @@ const mockClients = [
     id: 'client-2',
     name: 'Globex Ltd',
     email: 'globex@example.com',
-    companyName: null,
     phone: null,
     address: null,
   },
@@ -31,7 +29,6 @@ const mockClients = [
     id: 'client-3',
     name: 'Initech',
     email: 'initech@example.com',
-    companyName: 'Initech Inc',
     phone: null,
     address: '456 Office Park',
   },
@@ -119,7 +116,6 @@ describe('ClientSelector', () => {
           id: 'client-1',
           name: 'Acme Corp',
           email: 'acme@example.com',
-          companyName: 'Acme Corporation',
           phone: '+1-555-123-4567',
           address: '123 Main St',
         })
@@ -138,7 +134,6 @@ describe('ClientSelector', () => {
           id: 'client-2',
           name: 'Globex Ltd',
           email: 'globex@example.com',
-          companyName: null,
           phone: null,
           address: null,
         })
@@ -172,8 +167,8 @@ describe('ClientSelector', () => {
         />
       )
 
-      // Summary section shows company name and other details
-      expect(screen.getByText('Acme Corporation')).toBeInTheDocument()
+      // Summary section shows client name, email and other details
+      expect(screen.getByText('Acme Corp')).toBeInTheDocument()
       expect(screen.getByText('+1-555-123-4567')).toBeInTheDocument()
       expect(screen.getByText('123 Main St')).toBeInTheDocument()
     })
@@ -181,8 +176,8 @@ describe('ClientSelector', () => {
     it('does not show summary when no client selected', () => {
       render(<ClientSelector clients={mockClients} onSelect={mockOnSelect} />)
 
-      // Company name only appears in summary, not in select options
-      expect(screen.queryByText('Acme Corporation')).not.toBeInTheDocument()
+      // Address only appears in summary, not in select options
+      expect(screen.queryByText('123 Main St')).not.toBeInTheDocument()
     })
   })
 })

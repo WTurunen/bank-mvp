@@ -41,7 +41,6 @@ describe('ClientForm', () => {
 
       expect(screen.getByLabelText(/^name/i)).toBeInTheDocument()
       expect(screen.getByLabelText(/email/i)).toBeInTheDocument()
-      expect(screen.getByLabelText(/company name/i)).toBeInTheDocument()
       expect(screen.getByLabelText(/phone/i)).toBeInTheDocument()
       expect(screen.getByLabelText(/address/i)).toBeInTheDocument()
       expect(screen.getByRole('button', { name: /create client/i })).toBeInTheDocument()
@@ -52,7 +51,6 @@ describe('ClientForm', () => {
 
       expect(screen.getByLabelText(/^name/i)).toHaveValue('')
       expect(screen.getByLabelText(/email/i)).toHaveValue('')
-      expect(screen.getByLabelText(/company name/i)).toHaveValue('')
       expect(screen.getByLabelText(/phone/i)).toHaveValue('')
       expect(screen.getByLabelText(/address/i)).toHaveValue('')
     })
@@ -62,7 +60,6 @@ describe('ClientForm', () => {
         id: 'client-1',
         name: 'Acme Corp',
         email: 'acme@example.com',
-        companyName: 'Acme Corporation',
         phone: '+1-555-123-4567',
         address: '123 Main St',
         archivedAt: null,
@@ -73,7 +70,6 @@ describe('ClientForm', () => {
 
       expect(screen.getByLabelText(/^name/i)).toHaveValue('Acme Corp')
       expect(screen.getByLabelText(/email/i)).toHaveValue('acme@example.com')
-      expect(screen.getByLabelText(/company name/i)).toHaveValue('Acme Corporation')
       expect(screen.getByLabelText(/phone/i)).toHaveValue('+1-555-123-4567')
       expect(screen.getByLabelText(/address/i)).toHaveValue('123 Main St')
     })
@@ -83,7 +79,6 @@ describe('ClientForm', () => {
         id: 'client-1',
         name: 'Acme Corp',
         email: 'acme@example.com',
-        companyName: null,
         phone: null,
         address: null,
         archivedAt: null,
@@ -101,7 +96,6 @@ describe('ClientForm', () => {
         id: 'client-1',
         name: 'Acme Corp',
         email: 'acme@example.com',
-        companyName: null,
         phone: null,
         address: null,
         archivedAt: null,
@@ -189,7 +183,6 @@ describe('ClientForm', () => {
 
       await user.type(screen.getByLabelText(/^name/i), 'Test Client')
       await user.type(screen.getByLabelText(/email/i), 'test@example.com')
-      await user.type(screen.getByLabelText(/company name/i), 'Test Company')
       await user.type(screen.getByLabelText(/phone/i), '+1-555-000-0000')
       await user.type(screen.getByLabelText(/address/i), '456 Test Ave')
 
@@ -202,7 +195,6 @@ describe('ClientForm', () => {
       expect(mockCreateClient).toHaveBeenCalledWith({
         name: 'Test Client',
         email: 'test@example.com',
-        companyName: 'Test Company',
         phone: '+1-555-000-0000',
         address: '456 Test Ave',
       })
@@ -231,7 +223,6 @@ describe('ClientForm', () => {
         id: 'client-1',
         name: 'Old Name',
         email: 'old@example.com',
-        companyName: null,
         phone: null,
         address: null,
         archivedAt: null,
@@ -263,7 +254,6 @@ describe('ClientForm', () => {
         id: 'client-1',
         name: 'Test',
         email: 'test@example.com',
-        companyName: null,
         phone: null,
         address: null,
         archivedAt: null,
@@ -315,7 +305,6 @@ describe('ClientForm', () => {
         id: 'client-1',
         name: 'Test',
         email: 'test@example.com',
-        companyName: null,
         phone: null,
         address: null,
         archivedAt: null,
@@ -339,7 +328,6 @@ describe('ClientForm', () => {
         id: 'client-1',
         name: 'Test',
         email: 'test@example.com',
-        companyName: null,
         phone: null,
         address: null,
         archivedAt: null,
@@ -360,7 +348,6 @@ describe('ClientForm', () => {
         id: 'client-1',
         name: 'Test',
         email: 'test@example.com',
-        companyName: null,
         phone: null,
         address: null,
         archivedAt: null,

@@ -14,7 +14,6 @@ export type InvoiceInput = {
   clientId?: string;
   clientName: string;
   clientEmail: string;
-  clientCompanyName?: string | null;
   clientPhone?: string | null;
   clientAddress?: string | null;
   dueDate: string;
@@ -36,7 +35,6 @@ export async function createInvoice(data: InvoiceInput) {
       clientId: data.clientId,
       clientName: data.clientName,
       clientEmail: data.clientEmail,
-      clientCompanyName: data.clientCompanyName,
       clientPhone: data.clientPhone,
       clientAddress: data.clientAddress,
       dueDate: new Date(data.dueDate),
@@ -64,7 +62,6 @@ export async function updateInvoice(id: string, data: InvoiceInput) {
       clientId: data.clientId,
       clientName: data.clientName,
       clientEmail: data.clientEmail,
-      clientCompanyName: data.clientCompanyName,
       clientPhone: data.clientPhone,
       clientAddress: data.clientAddress,
       dueDate: new Date(data.dueDate),
@@ -99,8 +96,9 @@ export async function deleteInvoice(id: string) {
   redirect("/");
 }
 
-export async function getInvoices() {
+export async function getInvoices(clientId?: string) {
   return db.invoice.findMany({
+    where: clientId ? { clientId } : {},
     include: { lineItems: true },
     orderBy: { createdAt: "desc" },
   });

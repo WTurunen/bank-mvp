@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { InvoiceForm } from "@/components/invoice-form";
 import { getInvoice, updateInvoiceStatus, deleteInvoice } from "@/app/actions/invoices";
+import { getClients } from "@/app/actions/clients";
 
 type Props = {
   params: Promise<{ id: string }>;
@@ -11,7 +12,10 @@ type Props = {
 
 export default async function EditInvoicePage({ params }: Props) {
   const { id } = await params;
-  const invoice = await getInvoice(id);
+  const [invoice, clients] = await Promise.all([
+    getInvoice(id),
+    getClients(false),
+  ]);
 
   if (!invoice) {
     notFound();
@@ -70,7 +74,7 @@ export default async function EditInvoicePage({ params }: Props) {
             </form>
           </div>
         </div>
-        <InvoiceForm key={invoice.updatedAt.toString()} invoice={invoice} />
+        <InvoiceForm key={invoice.updatedAt.toString()} invoice={invoice} clients={clients} />
       </div>
     </div>
   );

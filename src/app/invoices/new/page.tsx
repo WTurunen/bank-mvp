@@ -1,8 +1,11 @@
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { InvoiceForm } from "@/components/invoice-form";
+import { getClients } from "@/app/actions/clients";
 
-export default function NewInvoicePage() {
+export default async function NewInvoicePage() {
+  const clients = await getClients(false);
+
   return (
     <div className="min-h-screen bg-gray-50">
       <div className="max-w-4xl mx-auto p-8">
@@ -12,7 +15,7 @@ export default function NewInvoicePage() {
           </Link>
           <h1 className="text-3xl font-bold text-gray-900">New Invoice</h1>
         </div>
-        <InvoiceForm />
+        <InvoiceForm clients={clients} />
       </div>
     </div>
   );

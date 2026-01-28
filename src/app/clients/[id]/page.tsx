@@ -21,7 +21,6 @@ export default async function EditClientPage({ params }: Props) {
     id: client.id,
     name: client.name,
     email: client.email,
-    companyName: client.companyName,
     phone: client.phone,
     address: client.address,
     archivedAt: client.archivedAt,

@@ -6,7 +6,6 @@ import { revalidatePath } from "next/cache";
 export type ClientInput = {
   name: string;
   email: string;
-  companyName?: string;
   phone?: string;
   address?: string;
 };
@@ -17,7 +16,6 @@ export async function createClient(data: ClientInput): Promise<string> {
       data: {
         name: data.name,
         email: data.email,
-        companyName: data.companyName,
         phone: data.phone,
         address: data.address,
       },
@@ -46,7 +44,6 @@ export async function updateClient(id: string, data: ClientInput) {
       data: {
         name: data.name,
         email: data.email,
-        companyName: data.companyName,
         phone: data.phone,
         address: data.address,
       },

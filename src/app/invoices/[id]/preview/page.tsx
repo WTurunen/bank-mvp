@@ -1,7 +1,9 @@
+import Link from "next/link";
 import { notFound } from "next/navigation";
 import { getInvoice } from "@/app/actions/invoices";
 import { formatCurrency, formatDate, calculateInvoiceTotal } from "@/lib/utils";
 import { PrintButton } from "@/components/print-button";
+import { Button } from "@/components/ui/button";
 
 type Props = {
   params: Promise<{ id: string }>;
@@ -20,7 +22,10 @@ export default async function InvoicePreviewPage({ params }: Props) {
   return (
     <div className="min-h-screen bg-gray-100 py-8 print:bg-white print:py-0">
       <div className="max-w-3xl mx-auto">
-        <div className="mb-4 print:hidden">
+        <div className="mb-4 print:hidden flex gap-2">
+          <Link href={`/invoices/${id}`}>
+            <Button variant="outline">Back to Edit</Button>
+          </Link>
           <PrintButton />
         </div>
 

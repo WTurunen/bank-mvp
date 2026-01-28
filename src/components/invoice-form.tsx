@@ -39,7 +39,6 @@ type Client = {
   id: string;
   name: string;
   email: string;
-  companyName: string | null;
   phone: string | null;
   address: string | null;
 };
@@ -49,7 +48,6 @@ type InvoiceProp = {
   clientId?: string | null;
   clientName: string;
   clientEmail: string;
-  clientCompanyName?: string | null;
   clientPhone?: string | null;
   clientAddress?: string | null;
   dueDate: Date;
@@ -74,7 +72,6 @@ export function InvoiceForm({ invoice, clients }: Props) {
   const [clientSnapshot, setClientSnapshot] = useState<{
     name: string;
     email: string;
-    companyName: string | null;
     phone: string | null;
     address: string | null;
   } | null>(
@@ -82,7 +79,6 @@ export function InvoiceForm({ invoice, clients }: Props) {
       ? {
           name: invoice.clientName,
           email: invoice.clientEmail,
-          companyName: invoice.clientCompanyName ?? null,
           phone: invoice.clientPhone ?? null,
           address: invoice.clientAddress ?? null,
         }
@@ -114,7 +110,6 @@ export function InvoiceForm({ invoice, clients }: Props) {
     setClientSnapshot({
       name: client.name,
       email: client.email,
-      companyName: client.companyName,
       phone: client.phone,
       address: client.address,
     });
@@ -212,7 +207,6 @@ export function InvoiceForm({ invoice, clients }: Props) {
         clientId: selectedClientId,
         clientName: clientSnapshot?.name ?? "",
         clientEmail: clientSnapshot?.email ?? "",
-        clientCompanyName: clientSnapshot?.companyName ?? null,
         clientPhone: clientSnapshot?.phone ?? null,
         clientAddress: clientSnapshot?.address ?? null,
         dueDate,
@@ -277,7 +271,6 @@ export function InvoiceForm({ invoice, clients }: Props) {
                   onChange={(e) => setClientSnapshot(prev => ({
                     name: e.target.value,
                     email: prev?.email ?? "",
-                    companyName: prev?.companyName ?? null,
                     phone: prev?.phone ?? null,
                     address: prev?.address ?? null,
                   }))}
@@ -293,7 +286,6 @@ export function InvoiceForm({ invoice, clients }: Props) {
                   onChange={(e) => setClientSnapshot(prev => ({
                     name: prev?.name ?? "",
                     email: e.target.value,
-                    companyName: prev?.companyName ?? null,
                     phone: prev?.phone ?? null,
                     address: prev?.address ?? null,
                   }))}

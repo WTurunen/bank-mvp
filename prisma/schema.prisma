@@ -11,7 +11,6 @@ model Client {
   id          String    @id @default(cuid())
   name        String
   email       String    @unique
-  companyName String?
   phone       String?
   address     String?
   archivedAt  DateTime?
@@ -31,7 +30,6 @@ model Invoice {
   // Snapshot fields (copied from client at invoice creation)
   clientName         String
   clientEmail        String
-  clientCompanyName  String?
   clientPhone        String?
   clientAddress      String?
 

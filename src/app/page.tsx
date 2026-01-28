@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { getInvoices } from "./actions/invoices";
+import { getClient } from "./actions/clients";
 import { Button } from "@/components/ui/button";
 import {
   Table,
@@ -12,10 +13,16 @@ import {
 import { formatCurrency, formatDate, calculateInvoiceTotal } from "@/lib/utils";
 import { StatCard } from "@/components/stat-card";
 import { StatusBadge } from "@/components/status-badge";
-import { DollarSign, CheckCircle, AlertTriangle, Plus } from "lucide-react";
+import { DollarSign, CheckCircle, AlertTriangle, Plus, X } from "lucide-react";
 
-export default async function Dashboard() {
-  const invoices = await getInvoices();
+type Props = {
+  searchParams: Promise<{ clientId?: string }>;
+};
+
+export default async function Dashboard({ searchParams }: Props) {
+  const { clientId } = await searchParams;
+  const invoices = await getInvoices(clientId);
+  const filterClient = clientId ? await getClient(clientId) : null;
 
   const stats = {
     outstanding: invoices
@@ -44,6 +51,17 @@ export default async function Dashboard() {
             </Button>
           </Link>
         </div>
+
+        {filterClient && (
+          <div className="mb-6 flex items-center gap-2 bg-blue-50 border border-blue-200 rounded-lg px-4 py-3">
+            <span className="text-blue-800">
+              Showing invoices for <strong>{filterClient.name}</strong>
+            </span>
+            <Link href="/" className="ml-auto text-blue-600 hover:text-blue-800">
+              <X className="w-4 h-4" />
+            </Link>
+          </div>
+        )}
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
           <StatCard

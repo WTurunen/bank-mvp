@@ -6,47 +6,42 @@ async function main() {
   console.log('Seeding clients and invoices...');
 
   // Create clients first
+  // Using RFC 2606 reserved TLD (.example.invalid) and fictional phone range (555-01xx)
   const clientsData = [
     {
-      name: 'Acme Corp',
-      email: 'billing@acme.com',
-      companyName: 'Acme Corporation',
-      phone: '+1-555-123-4567',
+      name: 'Acme Corporation',
+      email: 'billing@acme.example.invalid',
+      phone: '555-0101',
       address: '123 Business Ave\nSan Francisco, CA 94107',
     },
     {
-      name: 'Globex Ltd',
-      email: 'accounts@globex.com',
-      companyName: 'Globex Limited',
-      phone: '+1-555-234-5678',
+      name: 'Globex Limited',
+      email: 'accounts@globex.example.invalid',
+      phone: '555-0102',
       address: '456 Commerce St\nNew York, NY 10001',
     },
     {
-      name: 'Initech',
-      email: 'finance@initech.com',
-      companyName: 'Initech Inc',
-      phone: '+1-555-345-6789',
+      name: 'Initech Inc',
+      email: 'finance@initech.example.invalid',
+      phone: '555-0103',
       address: '789 Tech Park\nAustin, TX 78701',
     },
     {
-      name: 'Umbrella Inc',
-      email: 'ap@umbrella.com',
-      companyName: 'Umbrella Corporation',
-      phone: '+1-555-456-7890',
+      name: 'Umbrella Corporation',
+      email: 'ap@umbrella.example.invalid',
+      phone: '555-0104',
       address: '321 Corporate Blvd\nRacoon City, RC 12345',
     },
     {
-      name: 'Sterling Partners',
-      email: 'invoices@sterling.com',
-      companyName: 'Sterling & Partners LLP',
-      phone: '+1-555-567-8901',
+      name: 'Sterling & Partners LLP',
+      email: 'invoices@sterling.example.invalid',
+      phone: '555-0105',
       address: '555 Madison Ave\nNew York, NY 10022',
     },
     {
-      name: 'Northwind Traders',
-      email: 'billing@northwind.com',
-      companyName: 'Northwind Traders Inc',
-      phone: '+1-555-678-9012',
+      name: 'Northwind Traders Inc',
+      email: 'billing@northwind.example.invalid',
+      phone: '555-0106',
       address: '888 Trade Center\nSeattle, WA 98101',
     },
   ];
@@ -75,7 +70,7 @@ async function main() {
 
   const invoices = [
     {
-      clientName: 'Acme Corp',
+      clientName: 'Acme Corporation',
       status: 'paid',
       daysAgo: 20,
       dueDaysAgo: 10,
@@ -85,7 +80,7 @@ async function main() {
       ],
     },
     {
-      clientName: 'Globex Ltd',
+      clientName: 'Globex Limited',
       status: 'paid',
       daysAgo: 15,
       dueDaysAgo: 5,
@@ -95,7 +90,7 @@ async function main() {
       ],
     },
     {
-      clientName: 'Initech',
+      clientName: 'Initech Inc',
       status: 'sent',
       daysAgo: 5,
       dueDaysFromNow: 25,
@@ -105,7 +100,7 @@ async function main() {
       ],
     },
     {
-      clientName: 'Umbrella Inc',
+      clientName: 'Umbrella Corporation',
       status: 'sent',
       daysAgo: 14,
       dueDaysAgo: 4, // overdue
@@ -114,7 +109,7 @@ async function main() {
       ],
     },
     {
-      clientName: 'Sterling Partners',
+      clientName: 'Sterling & Partners LLP',
       status: 'draft',
       daysAgo: 2,
       dueDaysFromNow: 28,
@@ -124,7 +119,7 @@ async function main() {
       ],
     },
     {
-      clientName: 'Northwind Traders',
+      clientName: 'Northwind Traders Inc',
       status: 'draft',
       daysAgo: 1,
       dueDaysFromNow: 30,
@@ -163,7 +158,6 @@ async function main() {
         clientId,
         clientName: clientData.name,
         clientEmail: clientData.email,
-        clientCompanyName: clientData.companyName,
         clientPhone: clientData.phone,
         clientAddress: clientData.address,
         status: inv.status,

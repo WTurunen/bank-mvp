@@ -99,7 +99,6 @@ describe('validateClient', () => {
     const result = validateClient({
       name: 'Acme Corp',
       email: 'acme@example.com',
-      companyName: 'Acme Corporation',
       phone: '+1-555-123-4567',
       address: '123 Main St\nNew York, NY 10001',
     })
@@ -150,7 +149,6 @@ describe('validateClient', () => {
     const result = validateClient({
       name: 'Acme Corp',
       email: 'acme@example.com',
-      companyName: undefined,
       phone: null as unknown as undefined,
       address: undefined,
     })

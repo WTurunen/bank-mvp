@@ -20,7 +20,6 @@ type Client = {
   id: string;
   name: string;
   email: string;
-  companyName: string | null;
   phone: string | null;
   address: string | null;
   archivedAt: Date | null;
@@ -66,8 +65,7 @@ export default function ClientsPage() {
     const query = searchQuery.toLowerCase();
     return (
       client.name.toLowerCase().includes(query) ||
-      client.email.toLowerCase().includes(query) ||
-      (client.companyName?.toLowerCase().includes(query) ?? false)
+      client.email.toLowerCase().includes(query)
     );
   });
 
@@ -91,7 +89,7 @@ export default function ClientsPage() {
           <div className="relative">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
             <Input
-              placeholder="Search by name, email, or company..."
+              placeholder="Search by name or email..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               className="pl-10"
@@ -104,7 +102,6 @@ export default function ClientsPage() {
             <TableHeader>
               <TableRow>
                 <TableHead>Name</TableHead>
-                <TableHead>Company</TableHead>
                 <TableHead>Email</TableHead>
                 <TableHead>Phone</TableHead>
                 <TableHead>Invoices</TableHead>
@@ -114,7 +111,7 @@ export default function ClientsPage() {
             <TableBody>
               {error ? (
                 <TableRow>
-                  <TableCell colSpan={6} className="text-center py-8">
+                  <TableCell colSpan={5} className="text-center py-8">
                     <div className="text-red-600 mb-2">{error}</div>
                     <Button variant="outline" onClick={handleRetry}>
                       Retry
@@ -123,13 +120,13 @@ export default function ClientsPage() {
                 </TableRow>
               ) : isLoading ? (
                 <TableRow>
-                  <TableCell colSpan={6} className="text-center text-slate-500 py-8">
+                  <TableCell colSpan={5} className="text-center text-slate-500 py-8">
                     Loading...
                   </TableCell>
                 </TableRow>
               ) : filteredClients.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={6} className="text-center text-slate-500 py-8">
+                  <TableCell colSpan={5} className="text-center text-slate-500 py-8">
                     {searchQuery
                       ? "No clients match your search."
                       : "No clients yet. Create your first client to get started."}
@@ -157,10 +154,20 @@ export default function ClientsPage() {
                         )}
                       </div>
                     </TableCell>
-                    <TableCell>{client.companyName ?? "—"}</TableCell>
                     <TableCell>{client.email}</TableCell>
                     <TableCell>{client.phone ?? "—"}</TableCell>
-                    <TableCell>{client._count.invoices}</TableCell>
+                    <TableCell>
+                      {client._count.invoices > 0 ? (
+                        <Link
+                          href={`/?clientId=${client.id}`}
+                          className="text-blue-600 hover:underline"
+                        >
+                          {client._count.invoices}
+                        </Link>
+                      ) : (
+                        client._count.invoices
+                      )}
+                    </TableCell>
                     <TableCell className="text-right space-x-2">
                       <Link href={`/clients/${client.id}`}>
                         <Button variant="outline" size="sm">

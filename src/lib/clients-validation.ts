@@ -13,7 +13,6 @@ export const CLIENT_VALIDATION_MESSAGES = {
 export type ClientFormData = {
   name: string
   email: string
-  companyName?: string
   phone?: string
   address?: string
 }

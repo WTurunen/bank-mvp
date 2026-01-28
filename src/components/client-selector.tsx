@@ -7,7 +7,6 @@ type Client = {
   id: string;
   name: string;
   email: string;
-  companyName: string | null;
   phone: string | null;
   address: string | null;
 };
@@ -65,9 +64,6 @@ export function ClientSelector({ clients, onSelect, value }: Props) {
       {selectedClient && (
         <div className="bg-slate-50 rounded-lg p-3 text-sm space-y-1">
           <div className="font-medium text-slate-900">{selectedClient.name}</div>
-          {selectedClient.companyName && (
-            <div className="text-slate-600">{selectedClient.companyName}</div>
-          )}
           <div className="text-slate-500">{selectedClient.email}</div>
           {selectedClient.phone && (
             <div className="text-slate-500">{selectedClient.phone}</div>

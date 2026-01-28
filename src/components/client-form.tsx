@@ -15,7 +15,6 @@ type ClientProp = {
   id: string;
   name: string;
   email: string;
-  companyName: string | null;
   phone: string | null;
   address: string | null;
   archivedAt: Date | null;
@@ -29,7 +28,6 @@ type Props = {
 export function ClientForm({ client }: Props) {
   const [name, setName] = useState(client?.name ?? "");
   const [email, setEmail] = useState(client?.email ?? "");
-  const [companyName, setCompanyName] = useState(client?.companyName ?? "");
   const [phone, setPhone] = useState(client?.phone ?? "");
   const [address, setAddress] = useState(client?.address ?? "");
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -48,7 +46,7 @@ export function ClientForm({ client }: Props) {
     e.preventDefault();
     setError(null);
 
-    const validationErrors = validateClient({ name, email, companyName, phone, address });
+    const validationErrors = validateClient({ name, email, phone, address });
     if (validationErrors.length > 0) {
       setError(validationErrors[0].message);
       return;
@@ -60,7 +58,6 @@ export function ClientForm({ client }: Props) {
       const data = {
         name,
         email,
-        companyName: companyName || undefined,
         phone: phone || undefined,
         address: address || undefined,
       };
@@ -128,14 +125,6 @@ export function ClientForm({ client }: Props) {
                 onChange={(e) => handleInputChange(setEmail, e.target.value)}
               />
             </div>
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="companyName">Company Name <span className="text-slate-400 font-normal">(optional)</span></Label>
-            <Input
-              id="companyName"
-              value={companyName}
-              onChange={(e) => handleInputChange(setCompanyName, e.target.value)}
-            />
           </div>
           <div className="space-y-2">
             <Label htmlFor="phone">Phone <span className="text-slate-400 font-normal">(optional)</span></Label>

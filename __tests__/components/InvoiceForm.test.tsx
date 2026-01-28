@@ -34,7 +34,6 @@ const mockClients = [
     id: 'client-1',
     name: 'Acme Corp',
     email: 'acme@example.com',
-    companyName: 'Acme Corporation',
     phone: '+1-555-123-4567',
     address: '123 Main St',
   },
@@ -42,7 +41,6 @@ const mockClients = [
     id: 'client-2',
     name: 'Globex Ltd',
     email: 'globex@example.com',
-    companyName: null,
     phone: null,
     address: null,
   },
@@ -78,7 +76,6 @@ describe('InvoiceForm', () => {
         clientId: 'client-1',
         clientName: 'Acme Corp',
         clientEmail: 'acme@example.com',
-        clientCompanyName: 'Acme Corporation',
         clientPhone: '+1-555-123-4567',
         clientAddress: '123 Main St',
         dueDate: new Date('2026-02-28'),
@@ -414,7 +411,7 @@ describe('InvoiceForm', () => {
       await user.selectOptions(select, 'client-1')
 
       // Should show selected client info
-      expect(screen.getByText('Acme Corporation')).toBeInTheDocument()
+      expect(screen.getByText('Acme Corp')).toBeInTheDocument()
       expect(screen.getByText('acme@example.com')).toBeInTheDocument()
     })
 
@@ -445,7 +442,6 @@ describe('InvoiceForm', () => {
           clientId: 'client-1',
           clientName: 'Acme Corp',
           clientEmail: 'acme@example.com',
-          clientCompanyName: 'Acme Corporation',
           clientPhone: '+1-555-123-4567',
           clientAddress: '123 Main St',
         })
@@ -504,7 +500,6 @@ describe('InvoiceForm', () => {
             clientId: 'client-2',
             clientName: 'Globex Ltd',
             clientEmail: 'globex@example.com',
-            clientCompanyName: null,
             clientPhone: null,
             clientAddress: null,
           })

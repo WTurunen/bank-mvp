@@ -32,7 +32,6 @@ const mockClient = {
   id: 'client-1',
   name: 'Acme Corp',
   email: 'acme@example.com',
-  companyName: 'Acme Corporation',
   phone: '+1-555-123-4567',
   address: '123 Main St',
   archivedAt: null,
@@ -57,7 +56,6 @@ describe('createClient', () => {
       data: {
         name: 'Acme Corp',
         email: 'acme@example.com',
-        companyName: undefined,
         phone: undefined,
         address: undefined,
       },
@@ -71,7 +69,6 @@ describe('createClient', () => {
     await createClient({
       name: 'Acme Corp',
       email: 'acme@example.com',
-      companyName: 'Acme Corporation',
       phone: '+1-555-123-4567',
       address: '123 Main St',
     })
@@ -80,7 +77,6 @@ describe('createClient', () => {
       data: {
         name: 'Acme Corp',
         email: 'acme@example.com',
-        companyName: 'Acme Corporation',
         phone: '+1-555-123-4567',
         address: '123 Main St',
       },
@@ -131,7 +127,6 @@ describe('updateClient', () => {
       data: {
         name: 'Updated Corp',
         email: 'updated@example.com',
-        companyName: undefined,
         phone: undefined,
         address: undefined,
       },
