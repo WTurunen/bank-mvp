@@ -83,6 +83,8 @@ Prefer **deep modules** over small ones. A class with few methods hiding signifi
 
 2. **Use best model (opus) for planning, lesser models (sonnet/haiku) for implementation and review.** Planning requires deep thinking; implementation and review can be parallelized with faster models.
 
-2. **Always code review before commit.** Dispatch a review agent to check changes before staging and committing.
+3. **Atomic commits.** Each commit should represent one logical change. Group related files together (e.g., component + its tests), but separate distinct features or layers. Never bundle unrelated changes in a single commit.
 
-3. **Always run tests before push.** Run `npm run typecheck` and `npm run test:run` (or equivalent) and verify they pass before pushing to remote.
+4. **Always code review before commit.** Dispatch a review agent to check changes before staging and committing.
+
+5. **Always run tests before push.** Run `npm run typecheck` and `npm run test:run` (or equivalent) and verify they pass before pushing to remote.
