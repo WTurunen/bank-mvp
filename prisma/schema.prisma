@@ -46,7 +46,7 @@ model LineItem {
   id          String  @id @default(cuid())
   invoiceId   String
   description String
-  quantity    Float
-  unitPrice   Float
+  quantity    Decimal
+  unitPrice   Decimal
   invoice     Invoice @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
 }

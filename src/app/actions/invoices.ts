@@ -97,16 +97,36 @@ export async function deleteInvoice(id: string) {
 }
 
 export async function getInvoices(clientId?: string) {
-  return db.invoice.findMany({
+  const invoices = await db.invoice.findMany({
     where: clientId ? { clientId } : {},
     include: { lineItems: true },
     orderBy: { createdAt: "desc" },
   });
+
+  return invoices.map((invoice) => ({
+    ...invoice,
+    lineItems: invoice.lineItems.map((item) => ({
+      ...item,
+      quantity: item.quantity.toNumber(),
+      unitPrice: item.unitPrice.toNumber(),
+    })),
+  }));
 }
 
 export async function getInvoice(id: string) {
-  return db.invoice.findUnique({
+  const invoice = await db.invoice.findUnique({
     where: { id },
     include: { lineItems: true },
   });
+
+  if (!invoice) return null;
+
+  return {
+    ...invoice,
+    lineItems: invoice.lineItems.map((item) => ({
+      ...item,
+      quantity: item.quantity.toNumber(),
+      unitPrice: item.unitPrice.toNumber(),
+    })),
+  };
 }
