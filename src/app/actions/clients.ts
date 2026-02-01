@@ -22,6 +22,8 @@ export async function createClient(data: ClientInput): Promise<string> {
     });
 
     revalidatePath("/clients");
+    revalidatePath("/invoices/new");
+    revalidatePath("/invoices/[id]", "page");
     return client.id;
   } catch (error: unknown) {
     // Handle Prisma unique constraint violation
@@ -51,6 +53,8 @@ export async function updateClient(id: string, data: ClientInput) {
 
     revalidatePath("/clients");
     revalidatePath(`/clients/${id}`);
+    revalidatePath("/invoices/new");
+    revalidatePath("/invoices/[id]", "page");
   } catch (error: unknown) {
     // Handle Prisma unique constraint violation
     if (
@@ -73,6 +77,8 @@ export async function archiveClient(id: string) {
 
   revalidatePath("/clients");
   revalidatePath(`/clients/${id}`);
+  revalidatePath("/invoices/new");
+  revalidatePath("/invoices/[id]", "page");
 }
 
 export async function restoreClient(id: string) {
@@ -83,6 +89,8 @@ export async function restoreClient(id: string) {
 
   revalidatePath("/clients");
   revalidatePath(`/clients/${id}`);
+  revalidatePath("/invoices/new");
+  revalidatePath("/invoices/[id]", "page");
 }
 
 export async function getClient(id: string) {
