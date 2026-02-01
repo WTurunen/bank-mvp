@@ -22,8 +22,15 @@ export type InvoiceInput = {
 };
 
 async function generateInvoiceNumber(): Promise<string> {
-  const count = await db.invoice.count();
-  return `INV-${String(count + 1).padStart(3, "0")}`;
+  const latest = await db.invoice.findFirst({
+    orderBy: { invoiceNumber: "desc" },
+    select: { invoiceNumber: true },
+  });
+
+  if (!latest) return "INV-001";
+
+  const num = parseInt(latest.invoiceNumber.replace("INV-", ""), 10);
+  return `INV-${String(num + 1).padStart(3, "0")}`;
 }
 
 export async function createInvoice(data: InvoiceInput) {
