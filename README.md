@@ -7,7 +7,7 @@ A full-stack invoice management application. Create invoices for clients, track 
 | Layer | Choice | Notes |
 |---|---|---|
 | Framework | Next.js 16 (App Router) | Server Actions for mutations, server components for data fetching |
-| Database | PostgreSQL via Prisma | Decimal columns for monetary values; SQLite for local dev |
+| Database | PostgreSQL via Prisma | Decimal columns for monetary values |
 | UI | shadcn/ui + Tailwind CSS v4 | Radix primitives for accessible select/label components |
 | Testing | Vitest + React Testing Library | happy-dom environment; 139 tests across validation, actions, components, and pages |
 | CI | GitHub Actions | PostgreSQL 16 service container; lint → typecheck → test → build |
@@ -22,7 +22,7 @@ npx prisma db seed       # Populate with sample clients and invoices
 npm run dev              # Start dev server at http://localhost:3000
 ```
 
-For a fresh database, set `DATABASE_URL` in `.env` to a PostgreSQL connection string (or leave it unset to fall back to SQLite for local development).
+Set `DATABASE_URL` in `.env` to a PostgreSQL connection string.
 
 ## Project Structure
 
