@@ -1,6 +1,6 @@
 # Invoice Management MVP - Onboarding Guide
 
-This document covers the architecture and design decisions behind the Invoice Management MVP. It serves as both onboarding material and interview reference - explaining not just *what* the app does, but *why* it's built the way it is.
+This document covers the architecture and design decisions behind the Invoice Management MVP. It serves as both onboarding material and technical reference - explaining not just *what* the app does, but *why* it's built the way it is.
 
 ## Overview & Tech Stack
 
@@ -281,7 +281,7 @@ Form accepts both `1.50` and `1,50` as valid decimal input. Normalized before st
 /clients/[id]           Edit client
 ```
 
-## Design Decisions - Interview Talking Points
+## Design Decisions
 
 ### Why Server Actions over API Routes?
 
