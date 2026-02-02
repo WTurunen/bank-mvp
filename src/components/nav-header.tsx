@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { signOut } from "next-auth/react";
 import { FileText, Users } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -42,6 +43,12 @@ export function NavHeader() {
               </Link>
             );
           })}
+          <button
+            onClick={() => signOut({ callbackUrl: "/login" })}
+            className="text-sm text-gray-600 hover:text-gray-900 ml-auto"
+          >
+            Sign out
+          </button>
         </nav>
       </div>
     </header>
