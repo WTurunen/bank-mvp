@@ -4,11 +4,18 @@
 
 This system enables multiple agents to work on production-readiness features in parallel without conflicts.
 
+**Start here:**
+1. Read `WAY-OF-WORKING.md` — How to use this system
+2. Read `RATIONALE.md` — Why it's designed this way
+3. Pick a feature from `features/` and start working
+
 ## Structure
 
 ```
 docs/plans/implementation/
-├── README.md                 # This file
+├── README.md                 # This file (quick reference)
+├── WAY-OF-WORKING.md         # Step-by-step guide for agents
+├── RATIONALE.md              # Design decisions and why
 └── features/
     ├── 1.1-authentication.md
     ├── 1.2-tenant-isolation.md
