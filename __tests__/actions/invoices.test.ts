@@ -94,7 +94,7 @@ describe('createInvoice', () => {
 
     expect(db.client.findFirst).not.toHaveBeenCalled()
     expect(db.invoice.create).toHaveBeenCalled()
-    expect(result).toBe('invoice-1')
+    expect(result).toEqual({ success: true, data: 'invoice-1' })
   })
 
   it('creates an invoice with valid clientId', async () => {
@@ -116,25 +116,24 @@ describe('createInvoice', () => {
       where: { id: 'client-1', userId: 'test-user-id' },
     })
     expect(db.invoice.create).toHaveBeenCalled()
-    expect(result).toBe('invoice-1')
+    expect(result).toEqual({ success: true, data: 'invoice-1' })
   })
 
   it('rejects invalid clientId', async () => {
     vi.mocked(db.invoice.findFirst).mockResolvedValue(null)
     vi.mocked(db.client.findFirst).mockResolvedValue(null)
 
-    await expect(
-      createInvoice({
-        clientId: 'invalid-client-id',
-        clientName: 'Acme Corp',
-        clientEmail: 'acme@example.com',
-        dueDate: '2026-02-01',
-        lineItems: [
-          { description: 'Service', quantity: 1, unitPrice: 100 },
-        ],
-      })
-    ).rejects.toThrow('Client not found')
+    const result = await createInvoice({
+      clientId: 'invalid-client-id',
+      clientName: 'Acme Corp',
+      clientEmail: 'acme@example.com',
+      dueDate: '2026-02-01',
+      lineItems: [
+        { description: 'Service', quantity: 1, unitPrice: 100 },
+      ],
+    })
 
+    expect(result).toEqual({ success: false, error: 'Client not found' })
     expect(db.invoice.create).not.toHaveBeenCalled()
   })
 
@@ -186,34 +185,33 @@ describe('updateInvoice', () => {
     vi.mocked(db.invoice.findFirst).mockResolvedValue(mockInvoice)
     vi.mocked(db.client.findFirst).mockResolvedValue(null)
 
-    await expect(
-      updateInvoice('invoice-1', {
-        clientId: 'invalid-client-id',
-        clientName: 'Updated Corp',
-        clientEmail: 'updated@example.com',
-        dueDate: '2026-02-01',
-        lineItems: [
-          { description: 'Service', quantity: 1, unitPrice: 100 },
-        ],
-      })
-    ).rejects.toThrow('Client not found')
+    const result = await updateInvoice('invoice-1', {
+      clientId: 'invalid-client-id',
+      clientName: 'Updated Corp',
+      clientEmail: 'updated@example.com',
+      dueDate: '2026-02-01',
+      lineItems: [
+        { description: 'Service', quantity: 1, unitPrice: 100 },
+      ],
+    })
 
+    expect(result).toEqual({ success: false, error: 'Client not found' })
     expect(db.invoice.update).not.toHaveBeenCalled()
   })
 
   it('throws error for non-existent invoice', async () => {
     vi.mocked(db.invoice.findFirst).mockResolvedValue(null)
 
-    await expect(
-      updateInvoice('non-existent', {
-        clientName: 'Updated Corp',
-        clientEmail: 'updated@example.com',
-        dueDate: '2026-02-01',
-        lineItems: [
-          { description: 'Service', quantity: 1, unitPrice: 100 },
-        ],
-      })
-    ).rejects.toThrow('Invoice not found')
+    const result = await updateInvoice('non-existent', {
+      clientName: 'Updated Corp',
+      clientEmail: 'updated@example.com',
+      dueDate: '2026-02-01',
+      lineItems: [
+        { description: 'Service', quantity: 1, unitPrice: 100 },
+      ],
+    })
+
+    expect(result).toEqual({ success: false, error: 'Invoice not found' })
   })
 
   it('revalidates paths after update', async () => {
@@ -258,9 +256,9 @@ describe('updateInvoiceStatus', () => {
   it('throws error for non-existent invoice', async () => {
     vi.mocked(db.invoice.findFirst).mockResolvedValue(null)
 
-    await expect(
-      updateInvoiceStatus('non-existent', 'sent')
-    ).rejects.toThrow('Invoice not found')
+    const result = await updateInvoiceStatus('non-existent', 'sent')
+
+    expect(result).toEqual({ success: false, error: 'Invoice not found' })
   })
 })
 
@@ -283,9 +281,9 @@ describe('deleteInvoice', () => {
   it('throws error for non-existent invoice', async () => {
     vi.mocked(db.invoice.findFirst).mockResolvedValue(null)
 
-    await expect(deleteInvoice('non-existent')).rejects.toThrow(
-      'Invoice not found'
-    )
+    const result = await deleteInvoice('non-existent')
+
+    expect(result).toEqual({ success: false, error: 'Invoice not found' })
   })
 })
 

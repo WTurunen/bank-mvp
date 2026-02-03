@@ -167,12 +167,16 @@ describe('updateClient', () => {
     prismaError.code = 'P2002'
     vi.mocked(db.client.update).mockRejectedValue(prismaError)
 
-    await expect(
-      updateClient('client-1', {
-        name: 'Updated Corp',
-        email: 'duplicate@example.com',
-      })
-    ).rejects.toThrow('A client with this email already exists')
+    const result = await updateClient('client-1', {
+      name: 'Updated Corp',
+      email: 'duplicate@example.com',
+    })
+
+    expect(result).toEqual({
+      success: false,
+      error: 'A client with this email already exists',
+      field: 'email',
+    })
   })
 })
 
