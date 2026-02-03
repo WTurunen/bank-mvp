@@ -160,7 +160,7 @@ export async function updateInvoiceStatus(id: string, status: string): Promise<A
   return { success: true, data: undefined };
 }
 
-export async function deleteInvoice(id: string) {
+export async function deleteInvoice(id: string): Promise<ActionResult<void>> {
   const userId = await getCurrentUserId();
 
   // Verify ownership
@@ -169,7 +169,7 @@ export async function deleteInvoice(id: string) {
   });
 
   if (!existing) {
-    throw new Error("Invoice not found");
+    return { success: false, error: "Invoice not found" };
   }
 
   await db.invoice.delete({ where: { id } });
