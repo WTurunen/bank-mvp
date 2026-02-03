@@ -4,7 +4,7 @@ import { db } from "@/lib/db";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { getCurrentUserId } from "@/lib/auth";
-import { invoiceSchema, invoiceStatusSchema } from "@/lib/schemas";
+import { invoiceSchema, invoiceStatusSchema, ActionResult, validationError } from "@/lib/schemas";
 
 export type LineItemInput = {
   description: string;
@@ -35,11 +35,10 @@ async function generateInvoiceNumber(): Promise<string> {
   return `INV-${String(num + 1).padStart(3, "0")}`;
 }
 
-export async function createInvoice(data: InvoiceInput) {
+export async function createInvoice(data: InvoiceInput): Promise<ActionResult<string>> {
   const validated = invoiceSchema.safeParse(data);
   if (!validated.success) {
-    const firstError = validated.error.issues[0];
-    throw new Error(firstError.message);
+    return validationError(validated.error);
   }
 
   const invoiceNumber = await generateInvoiceNumber();
@@ -51,7 +50,7 @@ export async function createInvoice(data: InvoiceInput) {
       where: { id: data.clientId, userId },
     });
     if (!client) {
-      throw new Error("Client not found");
+      return { success: false, error: "Client not found" };
     }
   }
 
@@ -77,7 +76,7 @@ export async function createInvoice(data: InvoiceInput) {
   });
 
   revalidatePath("/");
-  return invoice.id;
+  return { success: true, data: invoice.id };
 }
 
 export async function updateInvoice(id: string, data: InvoiceInput) {
