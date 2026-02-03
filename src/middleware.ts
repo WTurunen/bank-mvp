@@ -3,10 +3,12 @@ import type { NextRequest } from "next/server";
 import { getToken } from "next-auth/jwt";
 
 export async function middleware(req: NextRequest) {
-  // Explicitly pass secret for Vercel Edge compatibility
+  // Vercel uses HTTPS, so cookies have __Secure- prefix
+  const isSecure = req.nextUrl.protocol === "https:";
   const token = await getToken({
     req,
     secret: process.env.AUTH_SECRET,
+    secureCookie: isSecure,
   });
   const isLoggedIn = !!token;
   const isAuthPage = req.nextUrl.pathname.startsWith("/login") ||
