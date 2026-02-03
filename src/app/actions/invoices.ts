@@ -81,6 +81,12 @@ export async function createInvoice(data: InvoiceInput) {
 }
 
 export async function updateInvoice(id: string, data: InvoiceInput) {
+  const validated = invoiceSchema.safeParse(data);
+  if (!validated.success) {
+    const firstError = validated.error.issues[0];
+    throw new Error(firstError.message);
+  }
+
   const userId = await getCurrentUserId();
 
   // Verify ownership
