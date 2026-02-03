@@ -4,7 +4,7 @@ import { db } from "@/lib/db";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { getCurrentUserId } from "@/lib/auth";
-import { invoiceSchema } from "@/lib/schemas";
+import { invoiceSchema, invoiceStatusSchema } from "@/lib/schemas";
 
 export type LineItemInput = {
   description: string;
@@ -144,6 +144,11 @@ export async function updateInvoiceStatus(id: string, status: string) {
 
   if (!existing) {
     throw new Error("Invoice not found");
+  }
+
+  const validated = invoiceStatusSchema.safeParse(status);
+  if (!validated.success) {
+    throw new Error("Status must be draft, sent, or paid");
   }
 
   await db.invoice.update({
