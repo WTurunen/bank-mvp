@@ -120,7 +120,7 @@ export async function archiveClient(id: string): Promise<ActionResult<void>> {
   return { success: true, data: undefined };
 }
 
-export async function restoreClient(id: string) {
+export async function restoreClient(id: string): Promise<ActionResult<void>> {
   const userId = await getCurrentUserId();
 
   // Verify ownership
@@ -129,7 +129,7 @@ export async function restoreClient(id: string) {
   });
 
   if (!existing) {
-    throw new Error("Client not found");
+    return { success: false, error: "Client not found" };
   }
 
   await db.client.update({
@@ -141,6 +141,7 @@ export async function restoreClient(id: string) {
   revalidatePath(`/clients/${id}`);
   revalidatePath("/invoices/new");
   revalidatePath("/invoices/[id]", "page");
+  return { success: true, data: undefined };
 }
 
 export async function getClient(id: string) {
