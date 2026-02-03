@@ -18,6 +18,7 @@ async function migrateClientsFromInvoices() {
     where: { clientId: null },
     select: {
       id: true,
+      userId: true,
       clientName: true,
       clientEmail: true,
       clientPhone: true,
@@ -42,6 +43,7 @@ async function migrateClientsFromInvoices() {
       const client = await prisma.client.upsert({
         where: { email },
         create: {
+          userId: data.userId,
           name: data.clientName,
           email: data.clientEmail,
           phone: data.clientPhone,

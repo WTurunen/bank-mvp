@@ -5,6 +5,11 @@ vi.mock('next/cache', () => ({
   revalidatePath: vi.fn(),
 }))
 
+// Mock auth
+vi.mock('@/lib/auth', () => ({
+  getCurrentUserId: vi.fn().mockResolvedValue('test-user-id'),
+}))
+
 // Mock the database
 vi.mock('@/lib/db', () => ({
   db: {
@@ -12,6 +17,7 @@ vi.mock('@/lib/db', () => ({
       create: vi.fn(),
       update: vi.fn(),
       findUnique: vi.fn(),
+      findFirst: vi.fn(),
       findMany: vi.fn(),
     },
   },
@@ -30,6 +36,7 @@ import {
 
 const mockClient = {
   id: 'client-1',
+  userId: 'test-user-id',
   name: 'Acme Corp',
   email: 'acme@example.com',
   phone: '+1-555-123-4567',
@@ -54,6 +61,7 @@ describe('createClient', () => {
 
     expect(db.client.create).toHaveBeenCalledWith({
       data: {
+        userId: 'test-user-id',
         name: 'Acme Corp',
         email: 'acme@example.com',
         phone: undefined,
@@ -75,6 +83,7 @@ describe('createClient', () => {
 
     expect(db.client.create).toHaveBeenCalledWith({
       data: {
+        userId: 'test-user-id',
         name: 'Acme Corp',
         email: 'acme@example.com',
         phone: '+1-555-123-4567',
@@ -115,6 +124,7 @@ describe('updateClient', () => {
   })
 
   it('updates a client', async () => {
+    vi.mocked(db.client.findFirst).mockResolvedValue(mockClient)
     vi.mocked(db.client.update).mockResolvedValue(mockClient)
 
     await updateClient('client-1', {
@@ -134,6 +144,7 @@ describe('updateClient', () => {
   })
 
   it('revalidates paths after update', async () => {
+    vi.mocked(db.client.findFirst).mockResolvedValue(mockClient)
     vi.mocked(db.client.update).mockResolvedValue(mockClient)
 
     await updateClient('client-1', {
@@ -146,6 +157,7 @@ describe('updateClient', () => {
   })
 
   it('throws user-friendly error for duplicate email', async () => {
+    vi.mocked(db.client.findFirst).mockResolvedValue(mockClient)
     const prismaError = new Error('Unique constraint failed')
     // @ts-expect-error - Adding Prisma error code to Error object
     prismaError.code = 'P2002'
@@ -168,6 +180,7 @@ describe('archiveClient', () => {
   it('sets archivedAt timestamp', async () => {
     const now = new Date()
     vi.setSystemTime(now)
+    vi.mocked(db.client.findFirst).mockResolvedValue(mockClient)
     vi.mocked(db.client.update).mockResolvedValue({
       ...mockClient,
       archivedAt: now,
@@ -182,6 +195,7 @@ describe('archiveClient', () => {
   })
 
   it('revalidates paths after archive', async () => {
+    vi.mocked(db.client.findFirst).mockResolvedValue(mockClient)
     vi.mocked(db.client.update).mockResolvedValue(mockClient)
 
     await archiveClient('client-1')
@@ -197,6 +211,7 @@ describe('restoreClient', () => {
   })
 
   it('clears archivedAt timestamp', async () => {
+    vi.mocked(db.client.findFirst).mockResolvedValue(mockClient)
     vi.mocked(db.client.update).mockResolvedValue({
       ...mockClient,
       archivedAt: null,
@@ -211,6 +226,7 @@ describe('restoreClient', () => {
   })
 
   it('revalidates paths after restore', async () => {
+    vi.mocked(db.client.findFirst).mockResolvedValue(mockClient)
     vi.mocked(db.client.update).mockResolvedValue(mockClient)
 
     await restoreClient('client-1')
@@ -226,19 +242,19 @@ describe('getClient', () => {
   })
 
   it('returns a client by id', async () => {
-    vi.mocked(db.client.findUnique).mockResolvedValue(mockClient)
+    vi.mocked(db.client.findFirst).mockResolvedValue(mockClient)
 
     const result = await getClient('client-1')
 
-    expect(db.client.findUnique).toHaveBeenCalledWith({
-      where: { id: 'client-1' },
+    expect(db.client.findFirst).toHaveBeenCalledWith({
+      where: { id: 'client-1', userId: 'test-user-id' },
       include: { invoices: true },
     })
     expect(result).toEqual(mockClient)
   })
 
   it('returns null for non-existent client', async () => {
-    vi.mocked(db.client.findUnique).mockResolvedValue(null)
+    vi.mocked(db.client.findFirst).mockResolvedValue(null)
 
     const result = await getClient('non-existent')
 
@@ -257,7 +273,7 @@ describe('getClients', () => {
     const result = await getClients()
 
     expect(db.client.findMany).toHaveBeenCalledWith({
-      where: { archivedAt: null },
+      where: { userId: 'test-user-id', archivedAt: null },
       include: { _count: { select: { invoices: true } } },
       orderBy: { name: 'asc' },
     })
@@ -271,7 +287,7 @@ describe('getClients', () => {
     const result = await getClients(true)
 
     expect(db.client.findMany).toHaveBeenCalledWith({
-      where: {},
+      where: { userId: 'test-user-id' },
       include: { _count: { select: { invoices: true } } },
       orderBy: { name: 'asc' },
     })

@@ -21,6 +21,7 @@ import { getClients } from '@/app/actions/clients'
 const mockClients = [
   {
     id: 'client-1',
+    userId: 'test-user-id',
     name: 'Acme Corp',
     email: 'acme@example.com',
     companyName: 'Acme Corporation',
@@ -33,6 +34,7 @@ const mockClients = [
   },
   {
     id: 'client-2',
+    userId: 'test-user-id',
     name: 'Globex Ltd',
     email: 'globex@example.com',
     companyName: null,

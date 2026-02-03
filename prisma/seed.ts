@@ -5,6 +5,19 @@ const prisma = new PrismaClient();
 async function main() {
   console.log('Seeding clients and invoices...');
 
+  // Get or create admin user for seeded data
+  const adminUser = await prisma.user.findUnique({
+    where: { email: 'admin@admin.com' },
+  });
+
+  if (!adminUser) {
+    console.error('Admin user not found. Please create admin@admin.com first.');
+    process.exit(1);
+  }
+
+  const userId = adminUser.id;
+  console.log(`Using user: ${adminUser.email} (${userId})`);
+
   // Create clients first
   // Using RFC 2606 reserved TLD (.example.invalid) and fictional phone range (555-01xx)
   const clientsData = [
@@ -52,7 +65,7 @@ async function main() {
     const client = await prisma.client.upsert({
       where: { email: clientData.email },
       update: clientData,
-      create: clientData,
+      create: { ...clientData, userId },
     });
     clients[clientData.name] = client.id;
     console.log(`Created/updated client: ${client.name}`);
@@ -154,6 +167,7 @@ async function main() {
 
     await prisma.invoice.create({
       data: {
+        userId,
         invoiceNumber,
         clientId,
         clientName: clientData.name,
