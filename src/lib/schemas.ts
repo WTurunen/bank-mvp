@@ -82,3 +82,16 @@ export const invoiceStatusSchema = z.enum(VALID_STATUSES, {
 });
 
 export type InvoiceStatus = z.infer<typeof invoiceStatusSchema>;
+
+export type ActionResult<T = void> =
+  | { success: true; data: T }
+  | { success: false; error: string; field?: string };
+
+export function validationError(error: z.ZodError): ActionResult<never> {
+  const firstError = error.issues[0];
+  return {
+    success: false,
+    error: firstError.message,
+    field: firstError.path.join("."),
+  };
+}
