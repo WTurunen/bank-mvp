@@ -4,6 +4,7 @@ import { db } from "@/lib/db";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { getCurrentUserId } from "@/lib/auth";
+import { invoiceSchema } from "@/lib/schemas";
 
 export type LineItemInput = {
   description: string;
@@ -35,6 +36,12 @@ async function generateInvoiceNumber(): Promise<string> {
 }
 
 export async function createInvoice(data: InvoiceInput) {
+  const validated = invoiceSchema.safeParse(data);
+  if (!validated.success) {
+    const firstError = validated.error.issues[0];
+    throw new Error(firstError.message);
+  }
+
   const invoiceNumber = await generateInvoiceNumber();
   const userId = await getCurrentUserId();
 
