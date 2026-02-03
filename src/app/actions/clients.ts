@@ -62,6 +62,12 @@ export async function updateClient(id: string, data: ClientInput) {
     throw new Error("Client not found");
   }
 
+  const validated = clientSchema.safeParse(data);
+  if (!validated.success) {
+    const firstError = validated.error.issues[0];
+    throw new Error(firstError.message);
+  }
+
   try {
     await db.client.update({
       where: { id },
