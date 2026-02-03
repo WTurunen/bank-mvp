@@ -2,6 +2,7 @@
 
 import { db } from "@/lib/db";
 import { revalidatePath } from "next/cache";
+import { getCurrentUserId } from "@/lib/auth";
 
 export type ClientInput = {
   name: string;
@@ -11,9 +12,12 @@ export type ClientInput = {
 };
 
 export async function createClient(data: ClientInput): Promise<string> {
+  const userId = await getCurrentUserId();
+
   try {
     const client = await db.client.create({
       data: {
+        userId,
         name: data.name,
         email: data.email,
         phone: data.phone,
@@ -40,6 +44,17 @@ export async function createClient(data: ClientInput): Promise<string> {
 }
 
 export async function updateClient(id: string, data: ClientInput) {
+  const userId = await getCurrentUserId();
+
+  // Verify ownership
+  const existing = await db.client.findFirst({
+    where: { id, userId },
+  });
+
+  if (!existing) {
+    throw new Error("Client not found");
+  }
+
   try {
     await db.client.update({
       where: { id },
@@ -70,6 +85,17 @@ export async function updateClient(id: string, data: ClientInput) {
 }
 
 export async function archiveClient(id: string) {
+  const userId = await getCurrentUserId();
+
+  // Verify ownership
+  const existing = await db.client.findFirst({
+    where: { id, userId },
+  });
+
+  if (!existing) {
+    throw new Error("Client not found");
+  }
+
   await db.client.update({
     where: { id },
     data: { archivedAt: new Date() },
@@ -82,6 +108,17 @@ export async function archiveClient(id: string) {
 }
 
 export async function restoreClient(id: string) {
+  const userId = await getCurrentUserId();
+
+  // Verify ownership
+  const existing = await db.client.findFirst({
+    where: { id, userId },
+  });
+
+  if (!existing) {
+    throw new Error("Client not found");
+  }
+
   await db.client.update({
     where: { id },
     data: { archivedAt: null },
@@ -94,15 +131,22 @@ export async function restoreClient(id: string) {
 }
 
 export async function getClient(id: string) {
-  return db.client.findUnique({
-    where: { id },
+  const userId = await getCurrentUserId();
+
+  return db.client.findFirst({
+    where: { id, userId },
     include: { invoices: true },
   });
 }
 
 export async function getClients(includeArchived = false) {
+  const userId = await getCurrentUserId();
+
   return db.client.findMany({
-    where: includeArchived ? {} : { archivedAt: null },
+    where: {
+      userId,
+      ...(includeArchived ? {} : { archivedAt: null }),
+    },
     include: { _count: { select: { invoices: true } } },
     orderBy: { name: "asc" },
   });

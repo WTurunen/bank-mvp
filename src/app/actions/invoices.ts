@@ -3,6 +3,7 @@
 import { db } from "@/lib/db";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
+import { getCurrentUserId } from "@/lib/auth";
 
 export type LineItemInput = {
   description: string;
@@ -35,9 +36,21 @@ async function generateInvoiceNumber(): Promise<string> {
 
 export async function createInvoice(data: InvoiceInput) {
   const invoiceNumber = await generateInvoiceNumber();
+  const userId = await getCurrentUserId();
+
+  // Verify client ownership if clientId is provided
+  if (data.clientId) {
+    const client = await db.client.findFirst({
+      where: { id: data.clientId, userId },
+    });
+    if (!client) {
+      throw new Error("Client not found");
+    }
+  }
 
   const invoice = await db.invoice.create({
     data: {
+      userId,
       invoiceNumber,
       clientId: data.clientId,
       clientName: data.clientName,
@@ -61,6 +74,27 @@ export async function createInvoice(data: InvoiceInput) {
 }
 
 export async function updateInvoice(id: string, data: InvoiceInput) {
+  const userId = await getCurrentUserId();
+
+  // Verify ownership
+  const existing = await db.invoice.findFirst({
+    where: { id, userId },
+  });
+
+  if (!existing) {
+    throw new Error("Invoice not found");
+  }
+
+  // Verify client ownership if clientId is provided
+  if (data.clientId) {
+    const client = await db.client.findFirst({
+      where: { id: data.clientId, userId },
+    });
+    if (!client) {
+      throw new Error("Client not found");
+    }
+  }
+
   await db.lineItem.deleteMany({ where: { invoiceId: id } });
 
   await db.invoice.update({
@@ -88,6 +122,17 @@ export async function updateInvoice(id: string, data: InvoiceInput) {
 }
 
 export async function updateInvoiceStatus(id: string, status: string) {
+  const userId = await getCurrentUserId();
+
+  // Verify ownership
+  const existing = await db.invoice.findFirst({
+    where: { id, userId },
+  });
+
+  if (!existing) {
+    throw new Error("Invoice not found");
+  }
+
   await db.invoice.update({
     where: { id },
     data: { status },
@@ -98,14 +143,30 @@ export async function updateInvoiceStatus(id: string, status: string) {
 }
 
 export async function deleteInvoice(id: string) {
+  const userId = await getCurrentUserId();
+
+  // Verify ownership
+  const existing = await db.invoice.findFirst({
+    where: { id, userId },
+  });
+
+  if (!existing) {
+    throw new Error("Invoice not found");
+  }
+
   await db.invoice.delete({ where: { id } });
   revalidatePath("/");
   redirect("/");
 }
 
 export async function getInvoices(clientId?: string) {
+  const userId = await getCurrentUserId();
+
   const invoices = await db.invoice.findMany({
-    where: clientId ? { clientId } : {},
+    where: {
+      userId,
+      ...(clientId ? { clientId } : {}),
+    },
     include: { lineItems: true },
     orderBy: { createdAt: "desc" },
   });
@@ -121,8 +182,10 @@ export async function getInvoices(clientId?: string) {
 }
 
 export async function getInvoice(id: string) {
-  const invoice = await db.invoice.findUnique({
-    where: { id },
+  const userId = await getCurrentUserId();
+
+  const invoice = await db.invoice.findFirst({
+    where: { id, userId },
     include: { lineItems: true },
   });
 

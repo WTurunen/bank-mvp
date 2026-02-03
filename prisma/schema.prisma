@@ -9,6 +9,8 @@ datasource db {
 
 model Client {
   id          String    @id @default(cuid())
+  userId      String
+  user        User      @relation(fields: [userId], references: [id])
   name        String
   email       String    @unique
   phone       String?
@@ -21,6 +23,8 @@ model Client {
 
 model Invoice {
   id            String     @id @default(cuid())
+  userId        String
+  user          User       @relation(fields: [userId], references: [id])
   invoiceNumber String     @unique
 
   // Reference to client (nullable for migration safety)
@@ -58,4 +62,6 @@ model User {
   name          String?
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
+  clients       Client[]
+  invoices      Invoice[]
 }
