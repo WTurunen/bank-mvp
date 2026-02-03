@@ -23,3 +23,20 @@ export const clientSchema = z.object({
 });
 
 export type ClientSchema = z.infer<typeof clientSchema>;
+
+export const lineItemSchema = z.object({
+  description: z
+    .string()
+    .min(1, "Description is required")
+    .max(500, "Description must be 500 characters or less"),
+  quantity: z
+    .number()
+    .positive("Quantity must be greater than zero")
+    .max(999999, "Quantity is too large"),
+  unitPrice: z
+    .number()
+    .min(0, "Price cannot be negative")
+    .max(999999999, "Price is too large"),
+});
+
+export type LineItemSchema = z.infer<typeof lineItemSchema>;
