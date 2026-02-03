@@ -133,7 +133,7 @@ export async function updateInvoice(id: string, data: InvoiceInput): Promise<Act
   return { success: true, data: undefined };
 }
 
-export async function updateInvoiceStatus(id: string, status: string) {
+export async function updateInvoiceStatus(id: string, status: string): Promise<ActionResult<void>> {
   const userId = await getCurrentUserId();
 
   // Verify ownership
@@ -142,12 +142,12 @@ export async function updateInvoiceStatus(id: string, status: string) {
   });
 
   if (!existing) {
-    throw new Error("Invoice not found");
+    return { success: false, error: "Invoice not found" };
   }
 
   const validated = invoiceStatusSchema.safeParse(status);
   if (!validated.success) {
-    throw new Error("Status must be draft, sent, or paid");
+    return { success: false, error: "Status must be draft, sent, or paid" };
   }
 
   await db.invoice.update({
@@ -157,6 +157,7 @@ export async function updateInvoiceStatus(id: string, status: string) {
 
   revalidatePath("/");
   revalidatePath(`/invoices/${id}`);
+  return { success: true, data: undefined };
 }
 
 export async function deleteInvoice(id: string) {
