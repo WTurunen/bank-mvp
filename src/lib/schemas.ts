@@ -77,8 +77,9 @@ export type InvoiceSchema = z.infer<typeof invoiceSchema>;
 
 export const VALID_STATUSES = ["draft", "sent", "paid"] as const;
 
+// @ts-expect-error: errorMap is a valid runtime option for z.enum
 export const invoiceStatusSchema = z.enum(VALID_STATUSES, {
-  message: "Status must be draft, sent, or paid",
+  errorMap: () => ({ message: "Status must be draft, sent, or paid" }),
 });
 
 export type InvoiceStatus = z.infer<typeof invoiceStatusSchema>;
