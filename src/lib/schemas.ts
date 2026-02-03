@@ -40,3 +40,37 @@ export const lineItemSchema = z.object({
 });
 
 export type LineItemSchema = z.infer<typeof lineItemSchema>;
+
+export const invoiceSchema = z.object({
+  clientId: z.string().optional(),
+  clientName: z
+    .string()
+    .min(1, "Client name is required")
+    .max(200, "Client name must be 200 characters or less"),
+  clientEmail: z
+    .string()
+    .min(1, "Client email is required")
+    .email("Invalid client email format")
+    .max(254, "Client email must be 254 characters or less"),
+  clientPhone: z
+    .string()
+    .max(50, "Phone must be 50 characters or less")
+    .optional()
+    .nullable(),
+  clientAddress: z
+    .string()
+    .max(500, "Address must be 500 characters or less")
+    .optional()
+    .nullable(),
+  dueDate: z.string().min(1, "Due date is required"),
+  notes: z
+    .string()
+    .max(2000, "Notes must be 2000 characters or less")
+    .optional()
+    .nullable(),
+  lineItems: z
+    .array(lineItemSchema)
+    .min(1, "At least one line item is required"),
+});
+
+export type InvoiceSchema = z.infer<typeof invoiceSchema>;
