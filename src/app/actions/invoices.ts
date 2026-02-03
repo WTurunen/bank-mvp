@@ -79,11 +79,10 @@ export async function createInvoice(data: InvoiceInput): Promise<ActionResult<st
   return { success: true, data: invoice.id };
 }
 
-export async function updateInvoice(id: string, data: InvoiceInput) {
+export async function updateInvoice(id: string, data: InvoiceInput): Promise<ActionResult<void>> {
   const validated = invoiceSchema.safeParse(data);
   if (!validated.success) {
-    const firstError = validated.error.issues[0];
-    throw new Error(firstError.message);
+    return validationError(validated.error);
   }
 
   const userId = await getCurrentUserId();
@@ -94,7 +93,7 @@ export async function updateInvoice(id: string, data: InvoiceInput) {
   });
 
   if (!existing) {
-    throw new Error("Invoice not found");
+    return { success: false, error: "Invoice not found" };
   }
 
   // Verify client ownership if clientId is provided
@@ -103,7 +102,7 @@ export async function updateInvoice(id: string, data: InvoiceInput) {
       where: { id: data.clientId, userId },
     });
     if (!client) {
-      throw new Error("Client not found");
+      return { success: false, error: "Client not found" };
     }
   }
 
@@ -131,6 +130,7 @@ export async function updateInvoice(id: string, data: InvoiceInput) {
 
   revalidatePath("/");
   revalidatePath(`/invoices/${id}`);
+  return { success: true, data: undefined };
 }
 
 export async function updateInvoiceStatus(id: string, status: string) {
