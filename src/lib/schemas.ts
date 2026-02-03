@@ -74,3 +74,11 @@ export const invoiceSchema = z.object({
 });
 
 export type InvoiceSchema = z.infer<typeof invoiceSchema>;
+
+export const VALID_STATUSES = ["draft", "sent", "paid"] as const;
+
+export const invoiceStatusSchema = z.enum(VALID_STATUSES, {
+  message: "Status must be draft, sent, or paid",
+});
+
+export type InvoiceStatus = z.infer<typeof invoiceStatusSchema>;
