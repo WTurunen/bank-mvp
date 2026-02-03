@@ -3,7 +3,7 @@
 import { db } from "@/lib/db";
 import { revalidatePath } from "next/cache";
 import { getCurrentUserId } from "@/lib/auth";
-import { clientSchema } from "@/lib/schemas";
+import { clientSchema, ActionResult, validationError } from "@/lib/schemas";
 
 export type ClientInput = {
   name: string;
@@ -12,13 +12,12 @@ export type ClientInput = {
   address?: string;
 };
 
-export async function createClient(data: ClientInput): Promise<string> {
+export async function createClient(data: ClientInput): Promise<ActionResult<string>> {
   const userId = await getCurrentUserId();
 
   const validated = clientSchema.safeParse(data);
   if (!validated.success) {
-    const firstError = validated.error.issues[0];
-    throw new Error(firstError.message);
+    return validationError(validated.error);
   }
 
   try {
@@ -35,7 +34,7 @@ export async function createClient(data: ClientInput): Promise<string> {
     revalidatePath("/clients");
     revalidatePath("/invoices/new");
     revalidatePath("/invoices/[id]", "page");
-    return client.id;
+    return { success: true, data: client.id };
   } catch (error: unknown) {
     // Handle Prisma unique constraint violation
     if (
@@ -44,7 +43,7 @@ export async function createClient(data: ClientInput): Promise<string> {
       "code" in error &&
       error.code === "P2002"
     ) {
-      throw new Error("A client with this email already exists");
+      return { success: false, error: "A client with this email already exists", field: "email" };
     }
     throw error;
   }
