@@ -49,7 +49,7 @@ export async function createClient(data: ClientInput): Promise<ActionResult<stri
   }
 }
 
-export async function updateClient(id: string, data: ClientInput) {
+export async function updateClient(id: string, data: ClientInput): Promise<ActionResult<void>> {
   const userId = await getCurrentUserId();
 
   // Verify ownership
@@ -58,13 +58,12 @@ export async function updateClient(id: string, data: ClientInput) {
   });
 
   if (!existing) {
-    throw new Error("Client not found");
+    return { success: false, error: "Client not found" };
   }
 
   const validated = clientSchema.safeParse(data);
   if (!validated.success) {
-    const firstError = validated.error.issues[0];
-    throw new Error(firstError.message);
+    return validationError(validated.error);
   }
 
   try {
@@ -82,6 +81,7 @@ export async function updateClient(id: string, data: ClientInput) {
     revalidatePath(`/clients/${id}`);
     revalidatePath("/invoices/new");
     revalidatePath("/invoices/[id]", "page");
+    return { success: true, data: undefined };
   } catch (error: unknown) {
     // Handle Prisma unique constraint violation
     if (
@@ -90,7 +90,7 @@ export async function updateClient(id: string, data: ClientInput) {
       "code" in error &&
       error.code === "P2002"
     ) {
-      throw new Error("A client with this email already exists");
+      return { success: false, error: "A client with this email already exists", field: "email" };
     }
     throw error;
   }
