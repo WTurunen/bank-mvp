@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { signOut } from "next-auth/react";
+import { signOut, useSession } from "next-auth/react";
 import { FileText, Users } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -13,6 +13,7 @@ const navItems = [
 
 export function NavHeader() {
   const pathname = usePathname();
+  const { data: session } = useSession();
 
   return (
     <header className="bg-white border-b border-slate-200">
@@ -43,12 +44,21 @@ export function NavHeader() {
               </Link>
             );
           })}
-          <button
-            onClick={() => signOut({ callbackUrl: "/login" })}
-            className="text-sm text-gray-600 hover:text-gray-900 ml-auto"
-          >
-            Sign out
-          </button>
+          {session ? (
+            <button
+              onClick={() => signOut({ callbackUrl: "/login" })}
+              className="text-sm text-gray-600 hover:text-gray-900 ml-auto"
+            >
+              Sign out
+            </button>
+          ) : (
+            <Link
+              href="/login"
+              className="text-sm text-gray-600 hover:text-gray-900 ml-auto"
+            >
+              Sign in
+            </Link>
+          )}
         </nav>
       </div>
     </header>
