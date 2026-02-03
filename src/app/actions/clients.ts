@@ -3,6 +3,7 @@
 import { db } from "@/lib/db";
 import { revalidatePath } from "next/cache";
 import { getCurrentUserId } from "@/lib/auth";
+import { clientSchema, ActionResult, validationError } from "@/lib/schemas";
 
 export type ClientInput = {
   name: string;
@@ -11,8 +12,13 @@ export type ClientInput = {
   address?: string;
 };
 
-export async function createClient(data: ClientInput): Promise<string> {
+export async function createClient(data: ClientInput): Promise<ActionResult<string>> {
   const userId = await getCurrentUserId();
+
+  const validated = clientSchema.safeParse(data);
+  if (!validated.success) {
+    return validationError(validated.error);
+  }
 
   try {
     const client = await db.client.create({
@@ -28,7 +34,7 @@ export async function createClient(data: ClientInput): Promise<string> {
     revalidatePath("/clients");
     revalidatePath("/invoices/new");
     revalidatePath("/invoices/[id]", "page");
-    return client.id;
+    return { success: true, data: client.id };
   } catch (error: unknown) {
     // Handle Prisma unique constraint violation
     if (
@@ -37,13 +43,13 @@ export async function createClient(data: ClientInput): Promise<string> {
       "code" in error &&
       error.code === "P2002"
     ) {
-      throw new Error("A client with this email already exists");
+      return { success: false, error: "A client with this email already exists", field: "email" };
     }
     throw error;
   }
 }
 
-export async function updateClient(id: string, data: ClientInput) {
+export async function updateClient(id: string, data: ClientInput): Promise<ActionResult<void>> {
   const userId = await getCurrentUserId();
 
   // Verify ownership
@@ -52,7 +58,12 @@ export async function updateClient(id: string, data: ClientInput) {
   });
 
   if (!existing) {
-    throw new Error("Client not found");
+    return { success: false, error: "Client not found" };
+  }
+
+  const validated = clientSchema.safeParse(data);
+  if (!validated.success) {
+    return validationError(validated.error);
   }
 
   try {
@@ -70,6 +81,7 @@ export async function updateClient(id: string, data: ClientInput) {
     revalidatePath(`/clients/${id}`);
     revalidatePath("/invoices/new");
     revalidatePath("/invoices/[id]", "page");
+    return { success: true, data: undefined };
   } catch (error: unknown) {
     // Handle Prisma unique constraint violation
     if (
@@ -78,13 +90,13 @@ export async function updateClient(id: string, data: ClientInput) {
       "code" in error &&
       error.code === "P2002"
     ) {
-      throw new Error("A client with this email already exists");
+      return { success: false, error: "A client with this email already exists", field: "email" };
     }
     throw error;
   }
 }
 
-export async function archiveClient(id: string) {
+export async function archiveClient(id: string): Promise<ActionResult<void>> {
   const userId = await getCurrentUserId();
 
   // Verify ownership
@@ -93,7 +105,7 @@ export async function archiveClient(id: string) {
   });
 
   if (!existing) {
-    throw new Error("Client not found");
+    return { success: false, error: "Client not found" };
   }
 
   await db.client.update({
@@ -105,9 +117,10 @@ export async function archiveClient(id: string) {
   revalidatePath(`/clients/${id}`);
   revalidatePath("/invoices/new");
   revalidatePath("/invoices/[id]", "page");
+  return { success: true, data: undefined };
 }
 
-export async function restoreClient(id: string) {
+export async function restoreClient(id: string): Promise<ActionResult<void>> {
   const userId = await getCurrentUserId();
 
   // Verify ownership
@@ -116,7 +129,7 @@ export async function restoreClient(id: string) {
   });
 
   if (!existing) {
-    throw new Error("Client not found");
+    return { success: false, error: "Client not found" };
   }
 
   await db.client.update({
@@ -128,6 +141,7 @@ export async function restoreClient(id: string) {
   revalidatePath(`/clients/${id}`);
   revalidatePath("/invoices/new");
   revalidatePath("/invoices/[id]", "page");
+  return { success: true, data: undefined };
 }
 
 export async function getClient(id: string) {

@@ -4,6 +4,7 @@ import { db } from "@/lib/db";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { getCurrentUserId } from "@/lib/auth";
+import { invoiceSchema, invoiceStatusSchema, ActionResult, validationError } from "@/lib/schemas";
 
 export type LineItemInput = {
   description: string;
@@ -34,7 +35,12 @@ async function generateInvoiceNumber(): Promise<string> {
   return `INV-${String(num + 1).padStart(3, "0")}`;
 }
 
-export async function createInvoice(data: InvoiceInput) {
+export async function createInvoice(data: InvoiceInput): Promise<ActionResult<string>> {
+  const validated = invoiceSchema.safeParse(data);
+  if (!validated.success) {
+    return validationError(validated.error);
+  }
+
   const invoiceNumber = await generateInvoiceNumber();
   const userId = await getCurrentUserId();
 
@@ -44,7 +50,7 @@ export async function createInvoice(data: InvoiceInput) {
       where: { id: data.clientId, userId },
     });
     if (!client) {
-      throw new Error("Client not found");
+      return { success: false, error: "Client not found" };
     }
   }
 
@@ -70,10 +76,15 @@ export async function createInvoice(data: InvoiceInput) {
   });
 
   revalidatePath("/");
-  return invoice.id;
+  return { success: true, data: invoice.id };
 }
 
-export async function updateInvoice(id: string, data: InvoiceInput) {
+export async function updateInvoice(id: string, data: InvoiceInput): Promise<ActionResult<void>> {
+  const validated = invoiceSchema.safeParse(data);
+  if (!validated.success) {
+    return validationError(validated.error);
+  }
+
   const userId = await getCurrentUserId();
 
   // Verify ownership
@@ -82,7 +93,7 @@ export async function updateInvoice(id: string, data: InvoiceInput) {
   });
 
   if (!existing) {
-    throw new Error("Invoice not found");
+    return { success: false, error: "Invoice not found" };
   }
 
   // Verify client ownership if clientId is provided
@@ -91,7 +102,7 @@ export async function updateInvoice(id: string, data: InvoiceInput) {
       where: { id: data.clientId, userId },
     });
     if (!client) {
-      throw new Error("Client not found");
+      return { success: false, error: "Client not found" };
     }
   }
 
@@ -119,9 +130,10 @@ export async function updateInvoice(id: string, data: InvoiceInput) {
 
   revalidatePath("/");
   revalidatePath(`/invoices/${id}`);
+  return { success: true, data: undefined };
 }
 
-export async function updateInvoiceStatus(id: string, status: string) {
+export async function updateInvoiceStatus(id: string, status: string): Promise<ActionResult<void>> {
   const userId = await getCurrentUserId();
 
   // Verify ownership
@@ -130,7 +142,12 @@ export async function updateInvoiceStatus(id: string, status: string) {
   });
 
   if (!existing) {
-    throw new Error("Invoice not found");
+    return { success: false, error: "Invoice not found" };
+  }
+
+  const validated = invoiceStatusSchema.safeParse(status);
+  if (!validated.success) {
+    return { success: false, error: "Status must be draft, sent, or paid" };
   }
 
   await db.invoice.update({
@@ -140,9 +157,10 @@ export async function updateInvoiceStatus(id: string, status: string) {
 
   revalidatePath("/");
   revalidatePath(`/invoices/${id}`);
+  return { success: true, data: undefined };
 }
 
-export async function deleteInvoice(id: string) {
+export async function deleteInvoice(id: string): Promise<ActionResult<void>> {
   const userId = await getCurrentUserId();
 
   // Verify ownership
@@ -151,7 +169,7 @@ export async function deleteInvoice(id: string) {
   });
 
   if (!existing) {
-    throw new Error("Invoice not found");
+    return { success: false, error: "Invoice not found" };
   }
 
   await db.invoice.delete({ where: { id } });

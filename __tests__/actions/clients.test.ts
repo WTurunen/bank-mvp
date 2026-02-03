@@ -68,7 +68,7 @@ describe('createClient', () => {
         address: undefined,
       },
     })
-    expect(result).toBe('client-1')
+    expect(result).toEqual({ success: true, data: 'client-1' })
   })
 
   it('creates a client with all fields', async () => {
@@ -103,18 +103,22 @@ describe('createClient', () => {
     expect(revalidatePath).toHaveBeenCalledWith('/clients')
   })
 
-  it('throws user-friendly error for duplicate email', async () => {
+  it('returns error result for duplicate email', async () => {
     const prismaError = new Error('Unique constraint failed')
     // @ts-expect-error - Adding Prisma error code to Error object
     prismaError.code = 'P2002'
     vi.mocked(db.client.create).mockRejectedValue(prismaError)
 
-    await expect(
-      createClient({
-        name: 'Acme Corp',
-        email: 'duplicate@example.com',
-      })
-    ).rejects.toThrow('A client with this email already exists')
+    const result = await createClient({
+      name: 'Acme Corp',
+      email: 'duplicate@example.com',
+    })
+
+    expect(result).toEqual({
+      success: false,
+      error: 'A client with this email already exists',
+      field: 'email',
+    })
   })
 })
 
@@ -163,12 +167,16 @@ describe('updateClient', () => {
     prismaError.code = 'P2002'
     vi.mocked(db.client.update).mockRejectedValue(prismaError)
 
-    await expect(
-      updateClient('client-1', {
-        name: 'Updated Corp',
-        email: 'duplicate@example.com',
-      })
-    ).rejects.toThrow('A client with this email already exists')
+    const result = await updateClient('client-1', {
+      name: 'Updated Corp',
+      email: 'duplicate@example.com',
+    })
+
+    expect(result).toEqual({
+      success: false,
+      error: 'A client with this email already exists',
+      field: 'email',
+    })
   })
 })
 
