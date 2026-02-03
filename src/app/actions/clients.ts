@@ -3,6 +3,7 @@
 import { db } from "@/lib/db";
 import { revalidatePath } from "next/cache";
 import { getCurrentUserId } from "@/lib/auth";
+import { clientSchema } from "@/lib/schemas";
 
 export type ClientInput = {
   name: string;
@@ -13,6 +14,12 @@ export type ClientInput = {
 
 export async function createClient(data: ClientInput): Promise<string> {
   const userId = await getCurrentUserId();
+
+  const validated = clientSchema.safeParse(data);
+  if (!validated.success) {
+    const firstError = validated.error.issues[0];
+    throw new Error(firstError.message);
+  }
 
   try {
     const client = await db.client.create({
