@@ -38,6 +38,16 @@ export async function createInvoice(data: InvoiceInput) {
   const invoiceNumber = await generateInvoiceNumber();
   const userId = await getCurrentUserId();
 
+  // Verify client ownership if clientId is provided
+  if (data.clientId) {
+    const client = await db.client.findFirst({
+      where: { id: data.clientId, userId },
+    });
+    if (!client) {
+      throw new Error("Client not found");
+    }
+  }
+
   const invoice = await db.invoice.create({
     data: {
       userId,
@@ -73,6 +83,16 @@ export async function updateInvoice(id: string, data: InvoiceInput) {
 
   if (!existing) {
     throw new Error("Invoice not found");
+  }
+
+  // Verify client ownership if clientId is provided
+  if (data.clientId) {
+    const client = await db.client.findFirst({
+      where: { id: data.clientId, userId },
+    });
+    if (!client) {
+      throw new Error("Client not found");
+    }
   }
 
   await db.lineItem.deleteMany({ where: { invoiceId: id } });
