@@ -27,15 +27,14 @@ export function LoginForm() {
       redirect: false,
     });
 
-    setLoading(false);
-
-    if (result?.error) {
+    if (result?.error || !result?.ok) {
       setError("Invalid email or password");
+      setLoading(false);
       return;
     }
 
-    router.push("/");
-    router.refresh();
+    // Full page redirect to ensure session is picked up
+    window.location.href = "/";
   }
 
   return (
