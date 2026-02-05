@@ -50,6 +50,57 @@ GitHub Actions workflow (`.github/workflows/ci.yml`) runs on push/PR to master:
 - Lint → Typecheck → Tests → DB Push → Build
 - All checks must pass before merge
 
+## File Index: Routes
+/|Dashboard with invoice list, stats|getInvoices,calculateInvoiceTotal
+/login|Auth login page|LoginForm
+/register|Auth registration page|RegisterForm
+/clients|Client list with archive toggle|getClients
+/clients/new|Create new client form|ClientForm,createClient
+/clients/[id]|Edit client detail page|getClient,updateClient
+/invoices/new|Create new invoice form|InvoiceForm,createInvoice
+/invoices/[id]|Edit invoice page|getInvoice,updateInvoice
+/invoices/[id]/preview|Print-ready invoice view|getInvoice,PrintButton
+
+## File Index: Actions
+src/app/actions/invoices.ts|invoice CRUD with tenant isolation|createInvoice,updateInvoice,updateInvoiceStatus,deleteInvoice,getInvoice,getInvoices
+src/app/actions/clients.ts|client CRUD with soft delete|createClient,updateClient,archiveClient,restoreClient,getClient,getClients
+src/app/actions/auth.ts|user registration action|registerUser
+
+## File Index: Components
+src/components/invoice-form.tsx|invoice create/edit form with line items|InvoiceForm
+src/components/client-form.tsx|client create/edit form|ClientForm
+src/components/client-selector.tsx|dropdown to pick existing client|ClientSelector
+src/components/login-form.tsx|email/password login form|LoginForm
+src/components/register-form.tsx|user registration form|RegisterForm
+src/components/nav-header.tsx|top navigation with logout|NavHeader
+src/components/stat-card.tsx|dashboard statistics card|StatCard
+src/components/status-badge.tsx|invoice status colored badge|StatusBadge
+src/components/print-button.tsx|triggers browser print dialog|PrintButton
+src/components/ui/*|shadcn primitives|Button,Input,Table,Card,Badge,Select,Textarea,Label
+
+## File Index: Lib
+src/lib/db.ts|Prisma client singleton|db
+src/lib/auth.ts|NextAuth config and session|auth,getCurrentUserId
+src/lib/schemas.ts|Zod validation schemas|invoiceSchema,clientSchema,lineItemSchema,ActionResult,validationError
+src/lib/validation.ts|pure invoice validation functions|validateInvoice,validateLineItemPrice,VALIDATION_MESSAGES
+src/lib/clients-validation.ts|pure client validation functions|validateClientName,validateClientEmail
+src/lib/auth-validation.ts|pure auth validation functions|validateEmail,validatePassword
+src/lib/utils.ts|formatting utilities|formatCurrency,formatDate,calculateInvoiceTotal,cn
+src/lib/password.ts|bcrypt hash/verify|hashPassword,verifyPassword
+src/middleware.ts|route protection|redirects unauthenticated to /login
+
+## File Index: Schema
+prisma/schema.prisma|PostgreSQL models|User(id,email,passwordHash),Client(id,userId,name,email,phone,address,archivedAt),Invoice(id,userId,clientId,invoiceNumber,clientName,clientEmail,status,dueDate,lineItems),LineItem(id,invoiceId,description,quantity,unitPrice)
+
+## File Index: Patterns
+TENANT_ISOLATION|all queries filter by userId from session|userId = await getCurrentUserId()
+CLIENT_SNAPSHOT|invoice stores clientName/Email/Phone/Address at creation|clientId optional, snapshot fields required
+STATUS_FLOW|draft->sent->paid with computed overdue|status === 'sent' && dueDate < now
+ACTIONRESULT|server actions return {success,data} or {success:false,error,field}|ActionResult<T> type
+EURO_DECIMALS|form accepts comma as decimal separator|parseNum replaces comma with dot
+INVOICE_NUMBERS|auto-generated INV-001, INV-002 sequence|generateInvoiceNumber()
+REVALIDATE_PATHS|actions call revalidatePath after mutations|revalidatePath("/"), revalidatePath(`/invoices/${id}`)
+
 ## Software Design Principles
 
 Prefer **deep modules** over small ones. A class with few methods hiding significant complexity beats many shallow classes with sprawling interfaces.
