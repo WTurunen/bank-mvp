@@ -22,6 +22,7 @@ vi.mock('@/lib/db', () => ({
       create: vi.fn(),
       update: vi.fn(),
       findFirst: vi.fn(),
+      findUnique: vi.fn(),
       findMany: vi.fn(),
       delete: vi.fn(),
     },
@@ -31,7 +32,23 @@ vi.mock('@/lib/db', () => ({
     client: {
       findFirst: vi.fn(),
     },
+    $transaction: vi.fn(),
+    $queryRaw: vi.fn(),
+    $executeRaw: vi.fn(),
   },
+}))
+
+// Mock transaction helper — passes the mocked db as the tx client
+vi.mock('@/lib/transaction', () => ({
+  withTransaction: vi.fn(async (callback) => {
+    const { db } = await import('@/lib/db')
+    return callback(db)
+  }),
+}))
+
+// Mock invoice number generator
+vi.mock('@/lib/invoice-number', () => ({
+  getNextInvoiceNumber: vi.fn().mockResolvedValue('INV-001'),
 }))
 
 import { db } from '@/lib/db'
@@ -60,6 +77,7 @@ const mockInvoice = {
   notes: 'Test notes',
   createdAt: new Date('2026-01-01'),
   updatedAt: new Date('2026-01-01'),
+  version: 0,
 }
 
 const mockClient = {
@@ -161,6 +179,7 @@ describe('updateInvoice', () => {
 
   it('updates an invoice with valid clientId', async () => {
     vi.mocked(db.invoice.findFirst).mockResolvedValue(mockInvoice)
+    vi.mocked(db.invoice.findUnique).mockResolvedValue({ version: 0 } as any)
     vi.mocked(db.client.findFirst).mockResolvedValue(mockClient)
     vi.mocked(db.lineItem.deleteMany).mockResolvedValue({ count: 1 })
     vi.mocked(db.invoice.update).mockResolvedValue(mockInvoice)
@@ -216,6 +235,7 @@ describe('updateInvoice', () => {
 
   it('revalidates paths after update', async () => {
     vi.mocked(db.invoice.findFirst).mockResolvedValue(mockInvoice)
+    vi.mocked(db.invoice.findUnique).mockResolvedValue({ version: 0 } as any)
     vi.mocked(db.lineItem.deleteMany).mockResolvedValue({ count: 1 })
     vi.mocked(db.invoice.update).mockResolvedValue(mockInvoice)
 
@@ -269,10 +289,14 @@ describe('deleteInvoice', () => {
 
   it('deletes an invoice', async () => {
     vi.mocked(db.invoice.findFirst).mockResolvedValue(mockInvoice)
+    vi.mocked(db.lineItem.deleteMany).mockResolvedValue({ count: 0 })
     vi.mocked(db.invoice.delete).mockResolvedValue(mockInvoice)
 
     await deleteInvoice('invoice-1')
 
+    expect(db.lineItem.deleteMany).toHaveBeenCalledWith({
+      where: { invoiceId: 'invoice-1' },
+    })
     expect(db.invoice.delete).toHaveBeenCalledWith({
       where: { id: 'invoice-1' },
     })

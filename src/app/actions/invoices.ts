@@ -5,6 +5,9 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { getCurrentUserId } from "@/lib/auth";
 import { invoiceSchema, invoiceStatusSchema, ActionResult, validationError } from "@/lib/schemas";
+import { withTransaction } from "@/lib/transaction";
+import { getNextInvoiceNumber } from "@/lib/invoice-number";
+import { Prisma } from "@prisma/client";
 
 export type LineItemInput = {
   description: string;
@@ -21,19 +24,8 @@ export type InvoiceInput = {
   dueDate: string;
   notes?: string;
   lineItems: LineItemInput[];
+  version?: number;
 };
-
-async function generateInvoiceNumber(): Promise<string> {
-  const latest = await db.invoice.findFirst({
-    orderBy: { invoiceNumber: "desc" },
-    select: { invoiceNumber: true },
-  });
-
-  if (!latest) return "INV-001";
-
-  const num = parseInt(latest.invoiceNumber.replace("INV-", ""), 10);
-  return `INV-${String(num + 1).padStart(3, "0")}`;
-}
 
 export async function createInvoice(data: InvoiceInput): Promise<ActionResult<string>> {
   const validated = invoiceSchema.safeParse(data);
@@ -41,7 +33,6 @@ export async function createInvoice(data: InvoiceInput): Promise<ActionResult<st
     return validationError(validated.error);
   }
 
-  const invoiceNumber = await generateInvoiceNumber();
   const userId = await getCurrentUserId();
 
   // Verify client ownership if clientId is provided
@@ -54,29 +45,64 @@ export async function createInvoice(data: InvoiceInput): Promise<ActionResult<st
     }
   }
 
-  const invoice = await db.invoice.create({
-    data: {
-      userId,
-      invoiceNumber,
-      clientId: data.clientId,
-      clientName: data.clientName,
-      clientEmail: data.clientEmail,
-      clientPhone: data.clientPhone,
-      clientAddress: data.clientAddress,
-      dueDate: new Date(data.dueDate),
-      notes: data.notes || null,
-      lineItems: {
-        create: data.lineItems.map((item) => ({
-          description: item.description,
-          quantity: item.quantity,
-          unitPrice: item.unitPrice,
-        })),
-      },
-    },
-  });
+  const MAX_RETRIES = 3;
+  let lastError: Error | null = null;
 
-  revalidatePath("/");
-  return { success: true, data: invoice.id };
+  for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
+    try {
+      const invoiceNumber = await getNextInvoiceNumber(userId);
+
+      const invoice = await db.invoice.create({
+        data: {
+          userId,
+          invoiceNumber,
+          clientId: data.clientId,
+          clientName: data.clientName,
+          clientEmail: data.clientEmail,
+          clientPhone: data.clientPhone,
+          clientAddress: data.clientAddress,
+          dueDate: new Date(data.dueDate),
+          notes: data.notes || null,
+          lineItems: {
+            create: data.lineItems.map((item) => ({
+              description: item.description,
+              quantity: item.quantity,
+              unitPrice: item.unitPrice,
+            })),
+          },
+        },
+      });
+
+      revalidatePath("/");
+      return { success: true, data: invoice.id };
+    } catch (error) {
+      lastError = error instanceof Error ? error : new Error(String(error));
+
+      // Check if this is a unique constraint violation (P2002)
+      const isUniqueConstraintViolation =
+        error instanceof Prisma.PrismaClientKnownRequestError &&
+        error.code === "P2002";
+
+      if (!isUniqueConstraintViolation || attempt === MAX_RETRIES) {
+        console.error("Failed to create invoice:", lastError);
+        return {
+          success: false,
+          error: "Failed to create invoice. Please try again.",
+        };
+      }
+
+      console.warn(
+        `Invoice creation attempt ${attempt}/${MAX_RETRIES} failed due to unique constraint, retrying...`
+      );
+      await new Promise((resolve) => setTimeout(resolve, 100 * attempt));
+    }
+  }
+
+  console.error("Failed to create invoice after retries:", lastError);
+  return {
+    success: false,
+    error: "Failed to create invoice. Please try again.",
+  };
 }
 
 export async function updateInvoice(id: string, data: InvoiceInput): Promise<ActionResult<void>> {
@@ -90,10 +116,19 @@ export async function updateInvoice(id: string, data: InvoiceInput): Promise<Act
   // Verify ownership
   const existing = await db.invoice.findFirst({
     where: { id, userId },
+    select: { id: true, version: true },
   });
 
   if (!existing) {
     return { success: false, error: "Invoice not found" };
+  }
+
+  // Check optimistic locking version
+  if (data.version !== undefined && data.version !== existing.version) {
+    return {
+      success: false,
+      error: "Invoice has been modified by another user. Please refresh and try again.",
+    };
   }
 
   // Verify client ownership if clientId is provided
@@ -106,31 +141,61 @@ export async function updateInvoice(id: string, data: InvoiceInput): Promise<Act
     }
   }
 
-  await db.lineItem.deleteMany({ where: { invoiceId: id } });
+  try {
+    await withTransaction(async (tx) => {
+      // Double-check version inside transaction
+      const current = await tx.invoice.findUnique({
+        where: { id },
+        select: { version: true },
+      });
 
-  await db.invoice.update({
-    where: { id },
-    data: {
-      clientId: data.clientId,
-      clientName: data.clientName,
-      clientEmail: data.clientEmail,
-      clientPhone: data.clientPhone,
-      clientAddress: data.clientAddress,
-      dueDate: new Date(data.dueDate),
-      notes: data.notes || null,
-      lineItems: {
-        create: data.lineItems.map((item) => ({
-          description: item.description,
-          quantity: item.quantity,
-          unitPrice: item.unitPrice,
-        })),
-      },
-    },
-  });
+      if (!current || (data.version !== undefined && current.version !== data.version)) {
+        throw new Error("VERSION_MISMATCH");
+      }
 
-  revalidatePath("/");
-  revalidatePath(`/invoices/${id}`);
-  return { success: true, data: undefined };
+      // Delete existing line items
+      await tx.lineItem.deleteMany({ where: { invoiceId: id } });
+
+      // Update invoice with new data and increment version
+      await tx.invoice.update({
+        where: { id },
+        data: {
+          clientId: data.clientId,
+          clientName: data.clientName,
+          clientEmail: data.clientEmail,
+          clientPhone: data.clientPhone,
+          clientAddress: data.clientAddress,
+          dueDate: new Date(data.dueDate),
+          notes: data.notes || null,
+          version: { increment: 1 },
+          lineItems: {
+            create: data.lineItems.map((item) => ({
+              description: item.description,
+              quantity: item.quantity,
+              unitPrice: item.unitPrice,
+            })),
+          },
+        },
+      });
+    });
+
+    revalidatePath("/");
+    revalidatePath(`/invoices/${id}`);
+    return { success: true, data: undefined };
+  } catch (error) {
+    if (error instanceof Error && error.message === "VERSION_MISMATCH") {
+      return {
+        success: false,
+        error: "Invoice has been modified by another user. Please refresh and try again.",
+      };
+    }
+
+    console.error("Failed to update invoice:", error);
+    return {
+      success: false,
+      error: "Failed to update invoice. Please try again.",
+    };
+  }
 }
 
 export async function updateInvoiceStatus(id: string, status: string): Promise<ActionResult<void>> {
@@ -166,13 +231,31 @@ export async function deleteInvoice(id: string): Promise<ActionResult<void>> {
   // Verify ownership
   const existing = await db.invoice.findFirst({
     where: { id, userId },
+    select: { id: true, invoiceNumber: true, status: true },
   });
 
   if (!existing) {
     return { success: false, error: "Invoice not found" };
   }
 
-  await db.invoice.delete({ where: { id } });
+  // Prevent deletion of paid invoices
+  if (existing.status === "paid") {
+    return { success: false, error: "Cannot delete a paid invoice" };
+  }
+
+  try {
+    await withTransaction(async (tx) => {
+      await tx.lineItem.deleteMany({ where: { invoiceId: id } });
+      await tx.invoice.delete({ where: { id } });
+    });
+  } catch (error) {
+    console.error("Failed to delete invoice:", error);
+    return {
+      success: false,
+      error: "Failed to delete invoice. Please try again.",
+    };
+  }
+
   revalidatePath("/");
   redirect("/");
 }
