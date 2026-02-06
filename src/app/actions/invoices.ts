@@ -8,6 +8,7 @@ import { invoiceSchema, invoiceStatusSchema, ActionResult, validationError } fro
 import { withTransaction } from "@/lib/transaction";
 import { getNextInvoiceNumber } from "@/lib/invoice-number";
 import { Prisma } from "@prisma/client";
+import { createLogger } from "@/lib/logger";
 
 export type LineItemInput = {
   description: string;
@@ -34,6 +35,9 @@ export async function createInvoice(data: InvoiceInput): Promise<ActionResult<st
   }
 
   const userId = await getCurrentUserId();
+  const log = createLogger({ action: "createInvoice", userId });
+
+  log.info({ clientName: data.clientName }, "Creating invoice");
 
   // Verify client ownership if clientId is provided
   if (data.clientId) {
@@ -73,6 +77,7 @@ export async function createInvoice(data: InvoiceInput): Promise<ActionResult<st
         },
       });
 
+      log.info({ invoiceId: invoice.id, invoiceNumber }, "Invoice created");
       revalidatePath("/");
       return { success: true, data: invoice.id };
     } catch (error) {
@@ -84,21 +89,22 @@ export async function createInvoice(data: InvoiceInput): Promise<ActionResult<st
         error.code === "P2002";
 
       if (!isUniqueConstraintViolation || attempt === MAX_RETRIES) {
-        console.error("Failed to create invoice:", lastError);
+        log.error({ error: lastError }, "Failed to create invoice");
         return {
           success: false,
           error: "Failed to create invoice. Please try again.",
         };
       }
 
-      console.warn(
+      log.warn(
+        { attempt, maxRetries: MAX_RETRIES },
         `Invoice creation attempt ${attempt}/${MAX_RETRIES} failed due to unique constraint, retrying...`
       );
       await new Promise((resolve) => setTimeout(resolve, 100 * attempt));
     }
   }
 
-  console.error("Failed to create invoice after retries:", lastError);
+  log.error({ error: lastError }, "Failed to create invoice after retries");
   return {
     success: false,
     error: "Failed to create invoice. Please try again.",
@@ -112,6 +118,9 @@ export async function updateInvoice(id: string, data: InvoiceInput): Promise<Act
   }
 
   const userId = await getCurrentUserId();
+  const log = createLogger({ action: "updateInvoice", userId, invoiceId: id });
+
+  log.info({ clientName: data.clientName }, "Updating invoice");
 
   // Verify ownership
   const existing = await db.invoice.findFirst({
@@ -179,6 +188,7 @@ export async function updateInvoice(id: string, data: InvoiceInput): Promise<Act
       });
     });
 
+    log.info("Invoice updated");
     revalidatePath("/");
     revalidatePath(`/invoices/${id}`);
     return { success: true, data: undefined };
@@ -190,7 +200,7 @@ export async function updateInvoice(id: string, data: InvoiceInput): Promise<Act
       };
     }
 
-    console.error("Failed to update invoice:", error);
+    log.error({ error }, "Failed to update invoice");
     return {
       success: false,
       error: "Failed to update invoice. Please try again.",
@@ -200,6 +210,9 @@ export async function updateInvoice(id: string, data: InvoiceInput): Promise<Act
 
 export async function updateInvoiceStatus(id: string, status: string): Promise<ActionResult<void>> {
   const userId = await getCurrentUserId();
+  const log = createLogger({ action: "updateInvoiceStatus", userId, invoiceId: id });
+
+  log.info({ status }, "Updating invoice status");
 
   // Verify ownership
   const existing = await db.invoice.findFirst({
@@ -220,6 +233,7 @@ export async function updateInvoiceStatus(id: string, status: string): Promise<A
     data: { status },
   });
 
+  log.info({ status }, "Invoice status updated");
   revalidatePath("/");
   revalidatePath(`/invoices/${id}`);
   return { success: true, data: undefined };
@@ -227,6 +241,7 @@ export async function updateInvoiceStatus(id: string, status: string): Promise<A
 
 export async function deleteInvoice(id: string): Promise<ActionResult<void>> {
   const userId = await getCurrentUserId();
+  const log = createLogger({ action: "deleteInvoice", userId, invoiceId: id });
 
   // Verify ownership
   const existing = await db.invoice.findFirst({
@@ -238,6 +253,8 @@ export async function deleteInvoice(id: string): Promise<ActionResult<void>> {
     return { success: false, error: "Invoice not found" };
   }
 
+  log.info({ invoiceNumber: existing.invoiceNumber, status: existing.status }, "Deleting invoice");
+
   // Prevent deletion of paid invoices
   if (existing.status === "paid") {
     return { success: false, error: "Cannot delete a paid invoice" };
@@ -248,8 +265,10 @@ export async function deleteInvoice(id: string): Promise<ActionResult<void>> {
       await tx.lineItem.deleteMany({ where: { invoiceId: id } });
       await tx.invoice.delete({ where: { id } });
     });
+
+    log.info({ invoiceNumber: existing.invoiceNumber }, "Invoice deleted");
   } catch (error) {
-    console.error("Failed to delete invoice:", error);
+    log.error({ error }, "Failed to delete invoice");
     return {
       success: false,
       error: "Failed to delete invoice. Please try again.",

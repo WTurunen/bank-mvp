@@ -75,6 +75,7 @@ const mockInvoice = {
   issueDate: new Date('2026-01-01'),
   dueDate: new Date('2026-02-01'),
   notes: 'Test notes',
+  archivedAt: null,
   createdAt: new Date('2026-01-01'),
   updatedAt: new Date('2026-01-01'),
   version: 0,
