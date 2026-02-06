@@ -1,5 +1,6 @@
 import NextAuth from "next-auth";
 import Credentials from "next-auth/providers/credentials";
+import * as Sentry from "@sentry/nextjs";
 import { db } from "@/lib/db";
 import { verifyPassword } from "@/lib/password";
 
@@ -54,6 +55,10 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
     async session({ session, token }) {
       if (session.user) {
         session.user.id = token.id as string;
+        Sentry.setUser({
+          id: session.user.id,
+          email: session.user.email || undefined,
+        });
       }
       return session;
     },
