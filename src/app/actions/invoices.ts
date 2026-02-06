@@ -9,6 +9,13 @@ import { withTransaction } from "@/lib/transaction";
 import { getNextInvoiceNumber } from "@/lib/invoice-number";
 import { Prisma } from "@prisma/client";
 import { createLogger } from "@/lib/logger";
+import {
+  PaginationParams,
+  PaginatedResult,
+  DEFAULT_PAGE_SIZE,
+  calculateSkipTake,
+  calculatePaginationMeta,
+} from "@/lib/pagination";
 
 export type LineItemInput = {
   description: string;
@@ -241,11 +248,10 @@ export async function updateInvoiceStatus(id: string, status: string): Promise<A
 
 export async function deleteInvoice(id: string): Promise<ActionResult<void>> {
   const userId = await getCurrentUserId();
-  const log = createLogger({ action: "deleteInvoice", userId, invoiceId: id });
+  const log = createLogger({ action: "archiveInvoice", userId, invoiceId: id });
 
-  // Verify ownership
   const existing = await db.invoice.findFirst({
-    where: { id, userId },
+    where: { id, userId, archivedAt: null },
     select: { id: true, invoiceNumber: true, status: true },
   });
 
@@ -253,45 +259,78 @@ export async function deleteInvoice(id: string): Promise<ActionResult<void>> {
     return { success: false, error: "Invoice not found" };
   }
 
-  log.info({ invoiceNumber: existing.invoiceNumber, status: existing.status }, "Deleting invoice");
-
-  // Prevent deletion of paid invoices
   if (existing.status === "paid") {
     return { success: false, error: "Cannot delete a paid invoice" };
   }
 
-  try {
-    await withTransaction(async (tx) => {
-      await tx.lineItem.deleteMany({ where: { invoiceId: id } });
-      await tx.invoice.delete({ where: { id } });
-    });
+  log.info({ invoiceNumber: existing.invoiceNumber }, "Archiving invoice");
 
-    log.info({ invoiceNumber: existing.invoiceNumber }, "Invoice deleted");
-  } catch (error) {
-    log.error({ error }, "Failed to delete invoice");
-    return {
-      success: false,
-      error: "Failed to delete invoice. Please try again.",
-    };
-  }
+  await db.invoice.update({
+    where: { id },
+    data: { archivedAt: new Date() },
+  });
 
+  log.info({ invoiceNumber: existing.invoiceNumber }, "Invoice archived");
   revalidatePath("/");
   redirect("/");
 }
 
-export async function getInvoices(clientId?: string) {
+export async function restoreInvoice(id: string): Promise<ActionResult<void>> {
   const userId = await getCurrentUserId();
+  const log = createLogger({ action: "restoreInvoice", userId, invoiceId: id });
 
-  const invoices = await db.invoice.findMany({
-    where: {
-      userId,
-      ...(clientId ? { clientId } : {}),
-    },
-    include: { lineItems: true },
-    orderBy: { createdAt: "desc" },
+  const existing = await db.invoice.findFirst({
+    where: { id, userId },
+    select: { id: true, invoiceNumber: true, archivedAt: true },
   });
 
-  return invoices.map((invoice) => ({
+  if (!existing) {
+    return { success: false, error: "Invoice not found" };
+  }
+
+  if (!existing.archivedAt) {
+    return { success: false, error: "Invoice is not archived" };
+  }
+
+  log.info({ invoiceNumber: existing.invoiceNumber }, "Restoring invoice");
+
+  await db.invoice.update({
+    where: { id },
+    data: { archivedAt: null },
+  });
+
+  log.info({ invoiceNumber: existing.invoiceNumber }, "Invoice restored");
+  revalidatePath("/");
+  revalidatePath(`/invoices/${id}`);
+  return { success: true, data: undefined };
+}
+
+export async function getInvoices(
+  clientId?: string,
+  pagination: PaginationParams = { page: 1, pageSize: DEFAULT_PAGE_SIZE },
+  includeArchived = false
+) {
+  const userId = await getCurrentUserId();
+  const { skip, take } = calculateSkipTake(pagination);
+
+  const where = {
+    userId,
+    ...(clientId ? { clientId } : {}),
+    ...(includeArchived ? {} : { archivedAt: null }),
+  };
+
+  const [invoices, totalCount] = await Promise.all([
+    db.invoice.findMany({
+      where,
+      include: { lineItems: true },
+      orderBy: { createdAt: "desc" },
+      skip,
+      take,
+    }),
+    db.invoice.count({ where }),
+  ]);
+
+  const data = invoices.map((invoice) => ({
     ...invoice,
     lineItems: invoice.lineItems.map((item) => ({
       ...item,
@@ -299,13 +338,22 @@ export async function getInvoices(clientId?: string) {
       unitPrice: item.unitPrice.toNumber(),
     })),
   }));
+
+  return {
+    data,
+    pagination: calculatePaginationMeta(totalCount, pagination),
+  };
 }
 
-export async function getInvoice(id: string) {
+export async function getInvoice(id: string, includeArchived = false) {
   const userId = await getCurrentUserId();
 
   const invoice = await db.invoice.findFirst({
-    where: { id, userId },
+    where: {
+      id,
+      userId,
+      ...(includeArchived ? {} : { archivedAt: null }),
+    },
     include: { lineItems: true },
   });
 
