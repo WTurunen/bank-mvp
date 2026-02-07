@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { getInvoicesList, getDashboardStats } from "./actions/invoices";
+import { getInvoicesList, getDashboardStats, type InvoiceListItem } from "./actions/invoices";
 import { getClient } from "./actions/clients";
 import { Button } from "@/components/ui/button";
 import {
@@ -117,7 +117,7 @@ export default async function Dashboard({ searchParams }: Props) {
                   </TableCell>
                 </TableRow>
               ) : (
-                invoices.map((invoice) => (
+                invoices.map((invoice: InvoiceListItem) => (
                   <TableRow key={invoice.id} className="hover:bg-slate-50">
                     <TableCell className="font-medium text-blue-600">
                       <Link href={`/invoices/${invoice.id}/preview`}>
