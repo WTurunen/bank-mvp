@@ -5,6 +5,13 @@ import { revalidatePath } from "next/cache";
 import { getCurrentUserId } from "@/lib/auth";
 import { clientSchema, ActionResult, validationError } from "@/lib/schemas";
 import { createLogger } from "@/lib/logger";
+import {
+  PaginationParams,
+  PaginatedResult,
+  DEFAULT_PAGE_SIZE,
+  calculateSkipTake,
+  calculatePaginationMeta,
+} from "@/lib/pagination";
 
 export type ClientInput = {
   name: string;
@@ -184,27 +191,38 @@ export type ClientListItem = {
   archivedAt: Date | null;
 };
 
-export async function getClientsList(includeArchived = false): Promise<ClientListItem[]> {
+export async function getClientsList(
+  includeArchived = false,
+  pagination: PaginationParams = { page: 1, pageSize: DEFAULT_PAGE_SIZE }
+): Promise<PaginatedResult<ClientListItem>> {
   const userId = await getCurrentUserId();
+  const { skip, take } = calculateSkipTake(pagination);
 
-  const clients = await db.client.findMany({
-    where: {
-      userId,
-      ...(includeArchived ? {} : { archivedAt: null }),
-    },
-    select: {
-      id: true,
-      name: true,
-      email: true,
-      phone: true,
-      address: true,
-      archivedAt: true,
-      _count: { select: { invoices: true } },
-    },
-    orderBy: { name: "asc" },
-  });
+  const where = {
+    userId,
+    ...(includeArchived ? {} : { archivedAt: null }),
+  };
 
-  return clients.map((client) => ({
+  const [clients, totalCount] = await Promise.all([
+    db.client.findMany({
+      where,
+      select: {
+        id: true,
+        name: true,
+        email: true,
+        phone: true,
+        address: true,
+        archivedAt: true,
+        _count: { select: { invoices: true } },
+      },
+      orderBy: { name: "asc" },
+      skip,
+      take,
+    }),
+    db.client.count({ where }),
+  ]);
+
+  const data: ClientListItem[] = clients.map((client) => ({
     id: client.id,
     name: client.name,
     email: client.email,
@@ -213,6 +231,11 @@ export async function getClientsList(includeArchived = false): Promise<ClientLis
     invoiceCount: client._count.invoices,
     archivedAt: client.archivedAt,
   }));
+
+  return {
+    data,
+    pagination: calculatePaginationMeta(totalCount, pagination),
+  };
 }
 
 export async function getClients(includeArchived = false) {
