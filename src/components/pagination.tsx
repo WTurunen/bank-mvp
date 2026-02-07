@@ -11,6 +11,7 @@ type PaginationProps = {
 export function Pagination({ pagination }: PaginationProps) {
   const router = useRouter();
   const searchParams = useSearchParams();
+
   const { page, totalPages, hasNextPage, hasPrevPage, totalCount } = pagination;
 
   function goToPage(newPage: number) {
@@ -19,11 +20,16 @@ export function Pagination({ pagination }: PaginationProps) {
     router.push(`?${params.toString()}`);
   }
 
-  if (totalPages <= 1) return null;
+  if (totalPages <= 1) {
+    return null;
+  }
 
+  // Generate page numbers to show
   const pageNumbers: (number | "...")[] = [];
   if (totalPages <= 7) {
-    for (let i = 1; i <= totalPages; i++) pageNumbers.push(i);
+    for (let i = 1; i <= totalPages; i++) {
+      pageNumbers.push(i);
+    }
   } else {
     pageNumbers.push(1);
     if (page > 3) pageNumbers.push("...");
@@ -40,19 +46,36 @@ export function Pagination({ pagination }: PaginationProps) {
         Page {page} of {totalPages} ({totalCount} total)
       </p>
       <div className="flex gap-1">
-        <Button variant="outline" size="sm" onClick={() => goToPage(page - 1)} disabled={!hasPrevPage}>
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => goToPage(page - 1)}
+          disabled={!hasPrevPage}
+        >
           Previous
         </Button>
         {pageNumbers.map((num, idx) =>
           num === "..." ? (
-            <span key={`ellipsis-${idx}`} className="px-2 py-1">...</span>
+            <span key={`ellipsis-${idx}`} className="px-2 py-1">
+              ...
+            </span>
           ) : (
-            <Button key={num} variant={num === page ? "default" : "outline"} size="sm" onClick={() => goToPage(num)}>
+            <Button
+              key={num}
+              variant={num === page ? "default" : "outline"}
+              size="sm"
+              onClick={() => goToPage(num)}
+            >
               {num}
             </Button>
           )
         )}
-        <Button variant="outline" size="sm" onClick={() => goToPage(page + 1)} disabled={!hasNextPage}>
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => goToPage(page + 1)}
+          disabled={!hasNextPage}
+        >
           Next
         </Button>
       </div>
