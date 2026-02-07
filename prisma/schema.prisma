@@ -19,6 +19,9 @@ model Client {
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt
   invoices    Invoice[]
+
+  @@index([userId, archivedAt])
+  @@index([archivedAt])
 }
 
 model Invoice {
@@ -43,7 +46,16 @@ model Invoice {
   notes         String?
   createdAt     DateTime   @default(now())
   updatedAt     DateTime   @updatedAt
+  version       Int        @default(0)
+  archivedAt    DateTime?
   lineItems     LineItem[]
+
+  @@index([userId, status])
+  @@index([userId, createdAt])
+  @@index([clientId])
+  @@index([status])
+  @@index([dueDate])
+  @@index([createdAt])
 }
 
 model LineItem {
@@ -64,4 +76,10 @@ model User {
   updatedAt     DateTime  @updatedAt
   clients       Client[]
   invoices      Invoice[]
+}
+
+model InvoiceCounter {
+  id        String   @id @default("default")
+  counter   Int      @default(0)
+  updatedAt DateTime @updatedAt
 }

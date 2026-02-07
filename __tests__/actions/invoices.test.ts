@@ -22,8 +22,10 @@ vi.mock('@/lib/db', () => ({
       create: vi.fn(),
       update: vi.fn(),
       findFirst: vi.fn(),
+      findUnique: vi.fn(),
       findMany: vi.fn(),
       delete: vi.fn(),
+      count: vi.fn(),
     },
     lineItem: {
       deleteMany: vi.fn(),
@@ -31,7 +33,23 @@ vi.mock('@/lib/db', () => ({
     client: {
       findFirst: vi.fn(),
     },
+    $transaction: vi.fn(),
+    $queryRaw: vi.fn(),
+    $executeRaw: vi.fn(),
   },
+}))
+
+// Mock transaction helper — passes the mocked db as the tx client
+vi.mock('@/lib/transaction', () => ({
+  withTransaction: vi.fn(async (callback) => {
+    const { db } = await import('@/lib/db')
+    return callback(db)
+  }),
+}))
+
+// Mock invoice number generator
+vi.mock('@/lib/invoice-number', () => ({
+  getNextInvoiceNumber: vi.fn().mockResolvedValue('INV-001'),
 }))
 
 import { db } from '@/lib/db'
@@ -58,8 +76,10 @@ const mockInvoice = {
   issueDate: new Date('2026-01-01'),
   dueDate: new Date('2026-02-01'),
   notes: 'Test notes',
+  archivedAt: null,
   createdAt: new Date('2026-01-01'),
   updatedAt: new Date('2026-01-01'),
+  version: 0,
 }
 
 const mockClient = {
@@ -161,6 +181,7 @@ describe('updateInvoice', () => {
 
   it('updates an invoice with valid clientId', async () => {
     vi.mocked(db.invoice.findFirst).mockResolvedValue(mockInvoice)
+    vi.mocked(db.invoice.findUnique).mockResolvedValue(mockInvoice)
     vi.mocked(db.client.findFirst).mockResolvedValue(mockClient)
     vi.mocked(db.lineItem.deleteMany).mockResolvedValue({ count: 1 })
     vi.mocked(db.invoice.update).mockResolvedValue(mockInvoice)
@@ -216,6 +237,7 @@ describe('updateInvoice', () => {
 
   it('revalidates paths after update', async () => {
     vi.mocked(db.invoice.findFirst).mockResolvedValue(mockInvoice)
+    vi.mocked(db.invoice.findUnique).mockResolvedValue(mockInvoice)
     vi.mocked(db.lineItem.deleteMany).mockResolvedValue({ count: 1 })
     vi.mocked(db.invoice.update).mockResolvedValue(mockInvoice)
 
@@ -267,14 +289,15 @@ describe('deleteInvoice', () => {
     vi.clearAllMocks()
   })
 
-  it('deletes an invoice', async () => {
+  it('archives an invoice (soft delete)', async () => {
     vi.mocked(db.invoice.findFirst).mockResolvedValue(mockInvoice)
-    vi.mocked(db.invoice.delete).mockResolvedValue(mockInvoice)
+    vi.mocked(db.invoice.update).mockResolvedValue(mockInvoice)
 
     await deleteInvoice('invoice-1')
 
-    expect(db.invoice.delete).toHaveBeenCalledWith({
+    expect(db.invoice.update).toHaveBeenCalledWith({
       where: { id: 'invoice-1' },
+      data: { archivedAt: expect.any(Date) },
     })
   })
 
@@ -306,28 +329,42 @@ describe('getInvoices', () => {
       ],
     }
     vi.mocked(db.invoice.findMany).mockResolvedValue([mockInvoiceWithLineItems])
+    vi.mocked(db.invoice.count).mockResolvedValue(1)
 
     const result = await getInvoices()
 
     expect(db.invoice.findMany).toHaveBeenCalledWith({
-      where: { userId: 'test-user-id' },
+      where: { userId: 'test-user-id', archivedAt: null },
       include: { lineItems: true },
       orderBy: { createdAt: 'desc' },
+      skip: 0,
+      take: 20,
     })
-    expect(result).toHaveLength(1)
-    expect(result[0].lineItems[0].quantity).toBe(1)
-    expect(result[0].lineItems[0].unitPrice).toBe(100)
+    expect(db.invoice.count).toHaveBeenCalledWith({
+      where: { userId: 'test-user-id', archivedAt: null },
+    })
+    expect(result.data).toHaveLength(1)
+    expect(result.data[0].lineItems[0].quantity).toBe(1)
+    expect(result.data[0].lineItems[0].unitPrice).toBe(100)
+    expect(result.pagination.totalCount).toBe(1)
+    expect(result.pagination.page).toBe(1)
   })
 
   it('filters by clientId when provided', async () => {
     vi.mocked(db.invoice.findMany).mockResolvedValue([])
+    vi.mocked(db.invoice.count).mockResolvedValue(0)
 
     await getInvoices('client-1')
 
     expect(db.invoice.findMany).toHaveBeenCalledWith({
-      where: { userId: 'test-user-id', clientId: 'client-1' },
+      where: { userId: 'test-user-id', clientId: 'client-1', archivedAt: null },
       include: { lineItems: true },
       orderBy: { createdAt: 'desc' },
+      skip: 0,
+      take: 20,
+    })
+    expect(db.invoice.count).toHaveBeenCalledWith({
+      where: { userId: 'test-user-id', clientId: 'client-1', archivedAt: null },
     })
   })
 })
@@ -355,7 +392,7 @@ describe('getInvoice', () => {
     const result = await getInvoice('invoice-1')
 
     expect(db.invoice.findFirst).toHaveBeenCalledWith({
-      where: { id: 'invoice-1', userId: 'test-user-id' },
+      where: { id: 'invoice-1', userId: 'test-user-id', archivedAt: null },
       include: { lineItems: true },
     })
     expect(result?.lineItems[0].quantity).toBe(1)
