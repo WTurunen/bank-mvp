@@ -181,7 +181,7 @@ describe('updateInvoice', () => {
 
   it('updates an invoice with valid clientId', async () => {
     vi.mocked(db.invoice.findFirst).mockResolvedValue(mockInvoice)
-    vi.mocked(db.invoice.findUnique).mockResolvedValue({ version: 0 } as any)
+    vi.mocked(db.invoice.findUnique).mockResolvedValue(mockInvoice)
     vi.mocked(db.client.findFirst).mockResolvedValue(mockClient)
     vi.mocked(db.lineItem.deleteMany).mockResolvedValue({ count: 1 })
     vi.mocked(db.invoice.update).mockResolvedValue(mockInvoice)
@@ -237,7 +237,7 @@ describe('updateInvoice', () => {
 
   it('revalidates paths after update', async () => {
     vi.mocked(db.invoice.findFirst).mockResolvedValue(mockInvoice)
-    vi.mocked(db.invoice.findUnique).mockResolvedValue({ version: 0 } as any)
+    vi.mocked(db.invoice.findUnique).mockResolvedValue(mockInvoice)
     vi.mocked(db.lineItem.deleteMany).mockResolvedValue({ count: 1 })
     vi.mocked(db.invoice.update).mockResolvedValue(mockInvoice)
 

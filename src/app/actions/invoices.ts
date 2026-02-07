@@ -11,7 +11,6 @@ import { Prisma } from "@prisma/client";
 import { createLogger } from "@/lib/logger";
 import {
   PaginationParams,
-  PaginatedResult,
   DEFAULT_PAGE_SIZE,
   calculateSkipTake,
   calculatePaginationMeta,
