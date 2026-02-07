@@ -493,7 +493,16 @@ export async function getInvoice(id: string, includeArchived = false) {
       userId,
       ...(includeArchived ? {} : { archivedAt: null }),
     },
-    include: { lineItems: true },
+    include: {
+      lineItems: true,
+      client: {
+        select: {
+          id: true,
+          name: true,
+          email: true,
+        },
+      },
+    },
   });
 
   if (!invoice) return null;
