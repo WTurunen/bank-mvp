@@ -1,230 +1,153 @@
-# Development Handoff Document
+# Production Readiness Handoff
 
-**Last Updated:** 2026-02-07 (Updated after completing Feature 1.4)
-**Branch:** `claude/continue-development-5HgXV`
-**Session:** Continue development from production-readiness plan
-
----
-
-## Latest Session Summary (2026-02-07)
-
-### Completed: Feature 1.4 - Rate Limiting ✅
-
-**What was done:**
-- Installed `limiter` package for in-memory rate limiting
-- Created rate limit configuration with three tiers:
-  - Authenticated users: 100 requests/minute
-  - Unauthenticated users: 20 requests/minute
-  - Auth routes (login/register): 5 attempts/minute
-- Implemented rate limiting middleware with IP-based tracking
-- Added rate limit response headers (X-RateLimit-Remaining, X-RateLimit-Reset)
-- Created rate limit exceeded page at `/rate-limited`
-- Fixed linting issues in login form
-- All tests pass (155 tests), TypeScript compiles, linting clean
-
-**Commits:**
-- 104860f: feat(1.4.1a): install rate limiting dependency
-- 59ad1b8: feat(1.4.2a): create rate limit configuration
-- 27325f8: feat(1.4.2b): create rate limit utility function
-- 559a18b: feat(1.4.3a-c,1.4.4a): add rate limiting to middleware with headers
-- 44b82ec: feat(1.4.4b): create rate limit exceeded page
-- d6cb4df: fix: resolve linting issues in rate limiting implementation
-
-**Impact:**
-🎉 **Track 1 (Security) is now 100% complete!** This unblocks production deployment from a security perspective.
+**Date:** 2026-02-07
+**Tests:** 312/312 passing (25 test files)
+**Typecheck:** Clean
+**Coverage:** ~73% (thresholds enforced at 70%)
 
 ---
 
-## Completed Features ✅
+## Summary
 
-### Track 1: Security (BLOCKING)
+The production-readiness plan identified 7 critical and 11 high-severity issues across 4 tracks (Security, Performance, Reliability, Data Integrity). All 13 features are implemented. Test coverage exceeds the 70% target at ~73%.
 
-#### 1.1 Authentication - ✅ COMPLETE (Merged PR #2)
-- NextAuth.js v5 installed and configured
-- User model with email/password authentication
-- Login and register pages implemented
-- Session middleware protecting routes
-- Password hashing with bcryptjs
-- **Commits:** fe45f40...48af9c7 (multiple commits merged)
-
-#### 1.2 Tenant Isolation - ✅ COMPLETE (Merged PR #3)
-- userId field added to Client and Invoice models
-- `getCurrentUserId()` helper implemented
-- All server actions filter by userId
-- Ownership verification in all update/delete operations
-- **Commit:** 27c2b29
-
-#### 1.3 Server-Side Validation - ✅ COMPLETE (Merged PR #4)
-- Zod validation library installed
-- Schemas created for Client, Invoice, LineItem
-- Status enum validation (draft/sent/paid)
-- All server actions validate input before database operations
-- ActionResult type with field-level error reporting
-- **Commit:** 12fb095
-
-#### 1.4 Rate Limiting - ✅ COMPLETE
-- Limiter library installed for in-memory rate limiting
-- Rate limit configuration: 100 req/min authenticated, 20 req/min unauthenticated, 5 req/min auth routes
-- Middleware applies rate limiting to all requests
-- Rate limit headers (X-RateLimit-Remaining, X-RateLimit-Reset) on responses
-- Rate limit exceeded page at /rate-limited
-- **Commits:** 104860f, 59ad1b8, 27325f8, 559a18b, 44b82ec, d6cb4df
+The application is production-ready. All critical and high-severity issues have been resolved.
 
 ---
 
-### Track 2: Performance
+## What Was Built
 
-#### 2.1 Pagination - ❌ TODO
-- **Status:** Not started
-- **Dependencies:** None
-- **Priority:** HIGH - Dashboard currently fetches ALL invoices
+### Track 1: Security (COMPLETE — 4/4 features)
 
-#### 2.2 Database Indexes - ❌ TODO
-- **Status:** Not started
-- **Dependencies:** None (can coordinate with other schema changes)
-- **Priority:** MEDIUM
+| Feature | Key Files | Summary |
+|---------|-----------|---------|
+| 1.1 Authentication | `src/lib/auth.ts`, `src/middleware.ts`, `src/app/login/`, `src/app/register/` | NextAuth.js v5 with email/password credentials, session middleware, login/register pages |
+| 1.2 Tenant Isolation | `src/app/actions/invoices.ts`, `src/app/actions/clients.ts` | userId on Client and Invoice models, all queries filter by userId, ownership checks on mutations |
+| 1.3 Server Validation | `src/lib/schemas.ts` | Zod schemas for Invoice, Client, LineItem, status enum; ActionResult type with field-level errors |
+| 1.4 Rate Limiting | `src/lib/rate-limit.ts`, `src/middleware.ts`, `src/app/rate-limited/page.tsx` | In-memory token bucket: 100 req/min (authenticated), 20 req/min (unauthenticated), 5 req/min (auth routes) |
 
-#### 2.3 Query Optimization - ❌ TODO
-- **Status:** Not started
-- **Dependencies:** 2.1 Pagination recommended first
-- **Priority:** MEDIUM
+### Track 2: Performance (COMPLETE — 3/3 features)
 
----
+| Feature | Key Files | Summary |
+|---------|-----------|---------|
+| 2.1 Pagination | `src/lib/pagination.ts`, `src/components/pagination.tsx` | PaginatedResult type, default 20/max 100 per page, URL-driven via `?page=N` |
+| 2.2 Database Indexes | `prisma/schema.prisma` | 8 indexes: Invoice (userId+status, userId+createdAt, clientId, status, dueDate, createdAt), Client (userId+archivedAt, archivedAt) |
+| 2.3 Query Optimization | `src/app/actions/invoices.ts`, `src/app/actions/clients.ts` | getInvoicesList/getClientsList with select-only queries, getDashboardStats, server-side totals, Prisma query logging in dev |
 
-### Track 3: Reliability
+### Track 3: Reliability (COMPLETE — 3/3 features)
 
-#### 3.1 Structured Logging - ❌ TODO
-- **Status:** Not started
-- **Dependencies:** None
-- **Priority:** MEDIUM - Important for debugging
+| Feature | Key Files | Summary |
+|---------|-----------|---------|
+| 3.1 Structured Logging | `src/lib/logger.ts` | Pino with environment-aware config (pretty in dev, JSON in prod), createLogger with context, all actions log start/success/failure |
+| 3.2 Error Monitoring | `sentry.client.config.ts`, `sentry.server.config.ts`, `sentry.edge.config.ts`, `src/app/error.tsx`, `src/app/global-error.tsx` | Sentry SDK for client/server/edge, error boundaries, user context from auth session |
+| 3.3 Test Coverage | `src/lib/*.test.ts`, `__tests__/**/*.test.{ts,tsx}`, `vitest.config.ts` | 312 tests across 25 files, ~73% coverage, thresholds enforced at 70%. Covers: validation schemas, server actions, components, auth, pagination, rate-limiting, transactions, logging, password hashing, invoice numbers. |
 
-#### 3.2 Error Monitoring - ❌ TODO
-- **Status:** Not started
-- **Dependencies:** None
-- **Priority:** MEDIUM
+### Track 4: Data Integrity (COMPLETE — 3/3 features)
 
-#### 3.3 Test Coverage - ❌ TODO
-- **Status:** Not started
-- **Dependencies:** 1.3 Server Validation (complete)
-- **Priority:** HIGH - Currently only ~5% coverage
-
----
-
-### Track 4: Data Integrity
-
-#### 4.1 Database Transactions - ❌ TODO
-- **Status:** Not started
-- **Dependencies:** None
-- **Priority:** HIGH - Prevents data corruption under concurrent load
-
-#### 4.2 Invoice Number Race Condition Fix - ❌ TODO
-- **Status:** Not started
-- **Dependencies:** None
-- **Priority:** HIGH - Can create duplicate invoice numbers under load
-
-#### 4.3 Soft Deletes for Invoices - ❌ TODO
-- **Status:** Not started (Note: Clients already have soft delete with `archivedAt`)
-- **Dependencies:** None
-- **Priority:** MEDIUM - Compliance risk
+| Feature | Key Files | Summary |
+|---------|-----------|---------|
+| 4.1 Database Transactions | `src/lib/transaction.ts`, `src/app/actions/invoices.ts` | withTransaction wrapper with retry logic (3 retries, exponential backoff), optimistic locking via version field on Invoice |
+| 4.2 Invoice Number Fix | `src/lib/invoice-number.ts`, `prisma/schema.prisma` | InvoiceCounter model with atomic `UPDATE ... RETURNING`, createInvoice retries on unique constraint violation (P2002) |
+| 4.3 Soft Deletes | `src/app/actions/invoices.ts`, `src/app/page.tsx` | archivedAt field on Invoice, deleteInvoice sets archivedAt instead of hard delete, restoreInvoice action, "Show archived" toggle on dashboard |
 
 ---
 
-## Current State Assessment
+## Architecture Decisions
 
-### What Works
-- ✅ Users can register and login
-- ✅ Users only see their own data (tenant isolation)
-- ✅ All user inputs are validated server-side
-- ✅ Rate limiting protects against DoS attacks
-- ✅ Clients support soft delete (archivedAt field)
-- ✅ Basic invoice CRUD operations with line items
-- ✅ Type safety with TypeScript
-- ✅ CI/CD pipeline with GitHub Actions
-
-### Critical Issues Remaining
-1. **No pagination** - Will fail with large datasets
-2. **No database transactions** - Concurrent operations can corrupt data
-3. **Invoice number race condition** - Can create duplicates under load
-4. **Test coverage needs improvement** - Currently at ~30% with basic tests
-5. **No structured logging** - Can't debug production issues effectively
-6. **No error monitoring** - No visibility into failures
-
-### Production Readiness Status
-**🎉 Track 1 (Security) is 100% COMPLETE! Production deployment is now unblocked from a security perspective.**
-
-Track 1 Status - 4 of 4 features complete:
-- ✅ 1.1 Authentication
-- ✅ 1.2 Tenant Isolation
-- ✅ 1.3 Server Validation
-- ✅ 1.4 Rate Limiting
+| Decision | Choice | Rationale |
+|----------|--------|-----------|
+| Rate limiting | In-memory token bucket (limiter) | Zero-dependency, sufficient for single-server MVP. Switch to @upstash/ratelimit + Redis when scaling horizontally. |
+| Concurrency control | Optimistic locking (version field) | Avoids database locks. Transaction re-checks version inside $transaction. Users get clear "modified by another user" error. |
+| Invoice soft deletes | archivedAt field | Financial records need audit trails. Hard deleting invoices creates compliance gaps. Clients already had archivedAt. |
+| Structured logging | Pino (not Winston) | Faster, structured JSON by default (what log aggregation services expect). pino-pretty for dev console. |
+| Invoice number generation | Raw SQL UPDATE ... RETURNING | Prisma doesn't support atomic increment natively. Raw SQL guarantees no duplicates under concurrent load. |
+| Invoice numbers | Global sequence (not per-user) | Simpler, avoids collisions. Single InvoiceCounter row with id="default". |
 
 ---
 
-## Recommended Next Steps
+## Gotchas
 
-### ✅ Track 1 (Security) - COMPLETE!
+1. **Next.js `redirect()` throws** — It works by throwing internally. Never put it inside a try/catch. See `deleteInvoice` in `src/app/actions/invoices.ts` — the redirect is AFTER the await, outside any try/catch.
 
-The security foundation is now solid. Production deployment is unblocked from a security perspective.
+2. **Prisma Decimal fields** — `quantity` and `unitPrice` are Decimal in the DB but converted with `.toNumber()` in getInvoices/getInvoice. InvoiceInput uses plain `number`.
 
-### Next Priorities (Choose Based on Use Case)
+3. **Sentry needs env vars** — Set `SENTRY_DSN` and `SENTRY_AUTH_TOKEN` for error reporting. Without them, Sentry is a silent no-op.
 
-1. **Option A: Fix Data Integrity Issues (Recommended for Production)**
-   - Implement 4.1 Database Transactions
-   - Implement 4.2 Invoice Number Fix
-   - **Critical:** Prevents data corruption under concurrent load
-   - **Impact:** Required before high-traffic production use
+4. **Rate limiting resets on server restart** — In-memory counters reset when the Node process restarts. Fine for MVP.
 
-2. **Option B: Add Pagination (Recommended for Scale)**
-   - Implement 2.1 Pagination
-   - Prevents performance degradation with large datasets
-   - Currently dashboard fetches ALL invoices (will break with 1000+ invoices)
-   - Can be done independently
-
-3. **Option C: Improve Observability**
-   - Implement 3.1 Structured Logging
-   - Implement 3.2 Error Monitoring
-   - Important for debugging production issues
-   - Can be done independently
-
-### Implementation Approach
-
-Follow the process described in `docs/plans/implementation/WAY-OF-WORKING.md`:
-
-1. Create feature branch or use existing development branch
-2. Read the specific feature file in `docs/plans/implementation/features/`
-3. Follow atomic tasks one at a time
-4. Commit with format: `feat(task-id): description`
-5. Run verification before marking complete:
-   ```bash
-   npm run typecheck
-   npm run test:run
-   npm run lint
+5. **Test mocks for withTransaction** — Tests that touch updateInvoice need to mock `@/lib/transaction`:
+   ```typescript
+   vi.mock('@/lib/transaction', () => ({
+     withTransaction: vi.fn(async (callback) => {
+       const { db } = await import('@/lib/db');
+       return callback(db);
+     }),
+   }));
    ```
 
+6. **getClients() on clients page** — The clients page is a "use client" component managing its own state. Server-side pagination would require refactoring to a server component.
+
 ---
 
-## Testing Before Deployment
+## Remaining Work
 
-Before deploying to production:
+All 13 planned features are complete. Potential future improvements:
+
+- Per-user invoice number sequences (currently global)
+- Redis-backed rate limiting for horizontal scaling
+- E2E tests for critical user journeys
+- Security headers (CSP, HSTS)
+- Health check endpoint (`/api/health`)
+- Request size limits
+- Real-database integration tests (current tests use mocked DB)
+
+---
+
+## How to Run
 
 ```bash
-# All must pass
-npm run typecheck
-npm run test:run
-npm run lint
-npm run build
+# Install dependencies
+npm install
 
-# Database migrations
+# Set up database (needs DATABASE_URL in .env)
 npx prisma db push
 npx prisma generate
+
+# Run dev server
+npm run dev
+
+# Run all checks
+npm run typecheck && npm run test:run && npm run lint
+
+# Build for production
+npm run build
+
+# Seed demo data
+npx prisma db seed
+```
+
+## Environment Variables
+
+```bash
+# Required
+DATABASE_URL="postgresql://user:pass@host:5432/db"
+AUTH_SECRET="generate-with-openssl-rand-base64-32"
+
+# Optional (Sentry — no-op without these)
+SENTRY_DSN=https://xxx@xxx.ingest.sentry.io/xxx
+NEXT_PUBLIC_SENTRY_DSN=https://xxx@xxx.ingest.sentry.io/xxx
+SENTRY_ORG=your-org
+SENTRY_PROJECT=bank-mvp
+SENTRY_AUTH_TOKEN=sntrys_xxx
+
+# Optional (logging)
+LOG_LEVEL=debug  # trace, debug, info, warn, error, fatal
 ```
 
 ---
 
-## Notes
+## Reference
 
-- All feature plans are in `docs/plans/implementation/features/`
-- Main plan is in `docs/plans/production-readiness.md`
-- Working guide is in `docs/plans/implementation/WAY-OF-WORKING.md`
-- Branch is already created: `claude/continue-development-5HgXV`
-- Ready to continue with next feature implementation
+- Original plan: `docs/plans/production-readiness.md`
+- Architecture & onboarding: `docs/onboarding.md`
+- Project instructions: `CLAUDE.md`
