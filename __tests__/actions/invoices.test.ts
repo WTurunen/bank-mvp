@@ -59,7 +59,10 @@ import {
   updateInvoice,
   updateInvoiceStatus,
   deleteInvoice,
+  restoreInvoice,
   getInvoices,
+  getInvoicesList,
+  getDashboardStats,
   getInvoice,
 } from '@/app/actions/invoices'
 
@@ -414,5 +417,200 @@ describe('getInvoice', () => {
     const result = await getInvoice('non-existent')
 
     expect(result).toBeNull()
+  })
+})
+
+describe('restoreInvoice', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+  })
+
+  it('restores an archived invoice', async () => {
+    vi.mocked(db.invoice.findFirst).mockResolvedValue({
+      ...mockInvoice,
+      archivedAt: new Date(),
+    })
+    vi.mocked(db.invoice.update).mockResolvedValue(mockInvoice)
+
+    const result = await restoreInvoice('invoice-1')
+
+    expect(db.invoice.update).toHaveBeenCalledWith({
+      where: { id: 'invoice-1' },
+      data: { archivedAt: null },
+    })
+    expect(result).toEqual({ success: true, data: undefined })
+  })
+
+  it('returns error for non-existent invoice', async () => {
+    vi.mocked(db.invoice.findFirst).mockResolvedValue(null)
+
+    const result = await restoreInvoice('non-existent')
+    expect(result).toEqual({ success: false, error: 'Invoice not found' })
+  })
+
+  it('returns error if invoice is not archived', async () => {
+    vi.mocked(db.invoice.findFirst).mockResolvedValue({
+      ...mockInvoice,
+      archivedAt: null,
+    })
+
+    const result = await restoreInvoice('invoice-1')
+    expect(result).toEqual({ success: false, error: 'Invoice is not archived' })
+  })
+})
+
+describe('deleteInvoice - paid invoice', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+  })
+
+  it('rejects deleting a paid invoice', async () => {
+    vi.mocked(db.invoice.findFirst).mockResolvedValue({
+      ...mockInvoice,
+      status: 'paid',
+    })
+
+    const result = await deleteInvoice('invoice-1')
+    expect(result).toEqual({ success: false, error: 'Cannot delete a paid invoice' })
+    expect(db.invoice.update).not.toHaveBeenCalled()
+  })
+})
+
+describe('getInvoicesList', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+  })
+
+  it('returns optimized list with computed totals', async () => {
+    vi.mocked(db.invoice.findMany).mockResolvedValue([
+      {
+        id: 'inv-1',
+        invoiceNumber: 'INV-001',
+        clientName: 'Acme',
+        status: 'draft',
+        dueDate: new Date('2026-02-01'),
+        archivedAt: null,
+        lineItems: [
+          { quantity: { toNumber: () => 2 }, unitPrice: { toNumber: () => 50 } },
+        ],
+      },
+    ] as never)
+    vi.mocked(db.invoice.count).mockResolvedValue(1)
+
+    const result = await getInvoicesList()
+
+    expect(result.data).toHaveLength(1)
+    expect(result.data[0].total).toBe(100)
+    expect(result.data[0].invoiceNumber).toBe('INV-001')
+    expect(result.pagination.totalCount).toBe(1)
+  })
+})
+
+describe('getDashboardStats', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+  })
+
+  it('calculates stats from invoices', async () => {
+    const pastDate = new Date('2020-01-01')
+    const futureDate = new Date('2099-01-01')
+
+    vi.mocked(db.invoice.findMany).mockResolvedValue([
+      {
+        status: 'paid',
+        dueDate: futureDate,
+        lineItems: [
+          { quantity: { toNumber: () => 1 }, unitPrice: { toNumber: () => 100 } },
+        ],
+      },
+      {
+        status: 'sent',
+        dueDate: futureDate,
+        lineItems: [
+          { quantity: { toNumber: () => 2 }, unitPrice: { toNumber: () => 50 } },
+        ],
+      },
+      {
+        status: 'sent',
+        dueDate: pastDate,
+        lineItems: [
+          { quantity: { toNumber: () => 1 }, unitPrice: { toNumber: () => 200 } },
+        ],
+      },
+      {
+        status: 'draft',
+        dueDate: futureDate,
+        lineItems: [
+          { quantity: { toNumber: () => 1 }, unitPrice: { toNumber: () => 50 } },
+        ],
+      },
+    ] as never)
+
+    const stats = await getDashboardStats()
+
+    expect(stats.totalPaid).toBe(100)
+    expect(stats.totalOutstanding).toBe(300)
+    expect(stats.totalOverdue).toBe(200)
+    expect(stats.overdueCount).toBe(1)
+    expect(stats.invoiceCount).toBe(4)
+  })
+
+  it('returns zeros when no invoices', async () => {
+    vi.mocked(db.invoice.findMany).mockResolvedValue([])
+
+    const stats = await getDashboardStats()
+
+    expect(stats).toEqual({
+      totalOutstanding: 0,
+      totalPaid: 0,
+      totalOverdue: 0,
+      invoiceCount: 0,
+      overdueCount: 0,
+    })
+  })
+})
+
+describe('createInvoice - validation', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+  })
+
+  it('rejects missing required fields', async () => {
+    const result = await createInvoice({
+      clientName: '',
+      clientEmail: 'test@example.com',
+      dueDate: '2026-02-01',
+      lineItems: [{ description: 'Service', quantity: 1, unitPrice: 100 }],
+    })
+
+    expect(result.success).toBe(false)
+    expect(db.invoice.create).not.toHaveBeenCalled()
+  })
+})
+
+describe('updateInvoice - version mismatch', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+  })
+
+  it('rejects when version does not match', async () => {
+    vi.mocked(db.invoice.findFirst).mockResolvedValue({
+      ...mockInvoice,
+      version: 5,
+    })
+
+    const result = await updateInvoice('invoice-1', {
+      clientName: 'Updated',
+      clientEmail: 'test@example.com',
+      dueDate: '2026-02-01',
+      lineItems: [{ description: 'Service', quantity: 1, unitPrice: 100 }],
+      version: 3,
+    })
+
+    expect(result).toEqual({
+      success: false,
+      error: 'Invoice has been modified by another user. Please refresh and try again.',
+    })
+    expect(db.invoice.update).not.toHaveBeenCalled()
   })
 })

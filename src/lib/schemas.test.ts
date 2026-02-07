@@ -4,7 +4,9 @@ import {
   lineItemSchema,
   invoiceStatusSchema,
   clientSchema,
+  validationError,
 } from "./schemas";
+import { z } from "zod";
 
 describe("lineItemSchema", () => {
   it("accepts valid line item", () => {
@@ -314,5 +316,36 @@ describe("clientSchema", () => {
       address: "a".repeat(501),
     });
     expect(result.success).toBe(false);
+  });
+});
+
+describe("validationError", () => {
+  it("extracts first error message and field path", () => {
+    const schema = z.object({ name: z.string().min(1, "Name is required") });
+    const parseResult = schema.safeParse({ name: "" });
+    if (!parseResult.success) {
+      const result = validationError(parseResult.error);
+      expect(result).toEqual({
+        success: false,
+        error: "Name is required",
+        field: "name",
+      });
+    }
+  });
+
+  it("joins nested field paths with dots", () => {
+    const schema = z.object({
+      address: z.object({
+        city: z.string().min(1, "City is required"),
+      }),
+    });
+    const parseResult = schema.safeParse({ address: { city: "" } });
+    if (!parseResult.success) {
+      const result = validationError(parseResult.error);
+      expect(result.success).toBe(false);
+      if (!result.success) {
+        expect(result.field).toBe("address.city");
+      }
+    }
   });
 });

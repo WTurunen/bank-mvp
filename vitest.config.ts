@@ -19,13 +19,11 @@ export default defineConfig({
         'src/test/**',
         'src/components/ui/**',
       ],
-      // Current baseline ~52%. Target: 70% after remaining integration tests
-      // (3.3.3b-3.3.4c) are implemented. Thresholds prevent regression.
       thresholds: {
-        lines: 50,
-        functions: 48,
-        branches: 42,
-        statements: 50,
+        lines: 70,
+        functions: 60,
+        branches: 60,
+        statements: 70,
       },
     },
   },

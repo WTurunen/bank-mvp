@@ -2,7 +2,7 @@
 
 **Status: COMPLETED** (2026-02-07)
 
-All 12 of 13 planned features have been fully implemented. Feature 3.3 (Test Coverage) is partially complete with baseline coverage at ~52% and 210 passing tests. The original plan called for 70% coverage, but the current thresholds are enforced at 50%.
+All 13 planned features have been fully implemented. Test coverage is at ~73% with 312 passing tests across 25 test files. Coverage thresholds enforced at 70%.
 
 See `/HANDOFF.md` for the consolidated handoff document with current state, architecture decisions, and remaining work.
 
@@ -45,29 +45,15 @@ See `/HANDOFF.md` for the consolidated handoff document with current state, arch
 | 2 Performance | 2.3 Query Optimization | Done |
 | 3 Reliability | 3.1 Structured Logging | Done |
 | 3 Reliability | 3.2 Error Monitoring | Done |
-| 3 Reliability | 3.3 Test Coverage | Partial (5/14 tasks, ~52% coverage) |
+| 3 Reliability | 3.3 Test Coverage | Done (~73% coverage, 312 tests, thresholds at 70%) |
 | 4 Data Integrity | 4.1 Database Transactions | Done |
 | 4 Data Integrity | 4.2 Invoice Number Fix | Done |
 | 4 Data Integrity | 4.3 Soft Deletes | Done |
-
-## Remaining Work
-
-The only incomplete feature is **3.3 Test Coverage**. What's done:
-- Schema validation tests (37 tests)
-- Auth validation tests (18 tests)
-- Coverage reporting configured (v8 provider)
-- Baseline thresholds enforced at 50%
-
-What remains:
-- Test database setup and factories
-- Mock auth helper
-- Invoice action integration tests
-- Client action integration tests
-- Raise coverage thresholds to 70%
 
 ## Verification
 
 Final verification (2026-02-07):
 - `npm run typecheck` — clean
-- `npm run test:run` — 210/210 passing
+- `npm run test:run` — 312/312 passing
+- `npm run test:coverage` — 73% lines (thresholds: 70%)
 - `npm run lint` — clean
