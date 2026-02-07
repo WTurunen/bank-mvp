@@ -5,8 +5,12 @@ import { checkRateLimit } from "@/lib/rate-limit";
 
 function getClientIP(req: NextRequest): string {
   const forwarded = req.headers.get("x-forwarded-for");
+  const real = req.headers.get("x-real-ip");
   if (forwarded) {
     return forwarded.split(",")[0].trim();
+  }
+  if (real) {
+    return real;
   }
   return "unknown";
 }
@@ -20,43 +24,54 @@ export async function middleware(req: NextRequest) {
     secureCookie: isSecure,
   });
   const isLoggedIn = !!token;
-  const ip = getClientIP(req);
-  const rateLimitKey = isLoggedIn ? (token?.sub || ip) : ip;
-  const rateLimitType = isLoggedIn ? "authenticated" : "unauthenticated";
-
-  // Apply rate limiting
-  const rateLimit = await checkRateLimit(rateLimitKey, rateLimitType);
-
-  if (!rateLimit.success) {
-    return new NextResponse("Too Many Requests", {
-      status: 429,
-      headers: {
-        "Retry-After": String(Math.ceil((rateLimit.reset - Date.now()) / 1000)),
-        "X-RateLimit-Remaining": String(rateLimit.remaining),
-      },
-    });
-  }
-
   const isAuthPage = req.nextUrl.pathname.startsWith("/login") ||
                      req.nextUrl.pathname.startsWith("/register");
   const isApiAuthRoute = req.nextUrl.pathname.startsWith("/api/auth");
 
-  // Use stricter rate limit for auth pages (login/register)
-  if (isAuthPage && !isLoggedIn) {
-    const authRateLimit = await checkRateLimit(ip, "auth");
-    if (!authRateLimit.success) {
-      return new NextResponse("Too many login attempts. Please try again later.", {
-        status: 429,
-        headers: {
-          "Retry-After": String(Math.ceil((authRateLimit.reset - Date.now()) / 1000)),
-        },
-      });
-    }
-  }
-
   // Allow auth API routes
   if (isApiAuthRoute) {
     return NextResponse.next();
+  }
+
+  // Rate limiting
+  const clientIP = getClientIP(req);
+  const rateLimitKey = isLoggedIn ? (token.sub as string) : clientIP;
+  const rateLimitType = isLoggedIn ? "authenticated" : "unauthenticated";
+
+  // Check general rate limit
+  const rateLimitResult = await checkRateLimit(rateLimitKey, rateLimitType);
+  if (!rateLimitResult.success) {
+    return NextResponse.json(
+      { error: "Too many requests" },
+      {
+        status: 429,
+        headers: {
+          "X-RateLimit-Limit": rateLimitType === "authenticated" ? "100" : "20",
+          "X-RateLimit-Remaining": "0",
+          "X-RateLimit-Reset": rateLimitResult.reset.toString(),
+          "Retry-After": "60",
+        },
+      }
+    );
+  }
+
+  // Apply stricter auth rate limit for login/register pages
+  if (isAuthPage && !isLoggedIn) {
+    const authRateLimitResult = await checkRateLimit(clientIP, "auth");
+    if (!authRateLimitResult.success) {
+      return NextResponse.json(
+        { error: "Too many authentication attempts" },
+        {
+          status: 429,
+          headers: {
+            "X-RateLimit-Limit": "5",
+            "X-RateLimit-Remaining": "0",
+            "X-RateLimit-Reset": authRateLimitResult.reset.toString(),
+            "Retry-After": "60",
+          },
+        }
+      );
+    }
   }
 
   // Redirect logged-in users away from auth pages
@@ -69,10 +84,12 @@ export async function middleware(req: NextRequest) {
     return NextResponse.redirect(new URL("/login", req.url));
   }
 
-  // Add rate limit headers to successful responses
+  // Add rate limit headers to response
   const response = NextResponse.next();
-  response.headers.set("X-RateLimit-Remaining", String(rateLimit.remaining));
-  response.headers.set("X-RateLimit-Reset", String(rateLimit.reset));
+  const limit = rateLimitType === "authenticated" ? "100" : "20";
+  response.headers.set("X-RateLimit-Limit", limit);
+  response.headers.set("X-RateLimit-Remaining", rateLimitResult.remaining.toString());
+  response.headers.set("X-RateLimit-Reset", rateLimitResult.reset.toString());
   return response;
 }
 

@@ -4,6 +4,7 @@ import { db } from "@/lib/db";
 import { revalidatePath } from "next/cache";
 import { getCurrentUserId } from "@/lib/auth";
 import { clientSchema, ActionResult, validationError } from "@/lib/schemas";
+import { createLogger } from "@/lib/logger";
 
 export type ClientInput = {
   name: string;
@@ -14,11 +15,14 @@ export type ClientInput = {
 
 export async function createClient(data: ClientInput): Promise<ActionResult<string>> {
   const userId = await getCurrentUserId();
+  const log = createLogger({ action: "createClient", userId });
 
   const validated = clientSchema.safeParse(data);
   if (!validated.success) {
     return validationError(validated.error);
   }
+
+  log.info({ clientName: data.name, clientEmail: data.email }, "Creating client");
 
   try {
     const client = await db.client.create({
@@ -31,6 +35,7 @@ export async function createClient(data: ClientInput): Promise<ActionResult<stri
       },
     });
 
+    log.info({ clientId: client.id, clientName: client.name }, "Client created");
     revalidatePath("/clients");
     revalidatePath("/invoices/new");
     revalidatePath("/invoices/[id]", "page");
@@ -43,14 +48,17 @@ export async function createClient(data: ClientInput): Promise<ActionResult<stri
       "code" in error &&
       error.code === "P2002"
     ) {
+      log.warn({ email: data.email }, "Client with this email already exists");
       return { success: false, error: "A client with this email already exists", field: "email" };
     }
+    log.error({ error }, "Failed to create client");
     throw error;
   }
 }
 
 export async function updateClient(id: string, data: ClientInput): Promise<ActionResult<void>> {
   const userId = await getCurrentUserId();
+  const log = createLogger({ action: "updateClient", userId, clientId: id });
 
   // Verify ownership
   const existing = await db.client.findFirst({
@@ -66,6 +74,8 @@ export async function updateClient(id: string, data: ClientInput): Promise<Actio
     return validationError(validated.error);
   }
 
+  log.info({ clientName: data.name, clientEmail: data.email }, "Updating client");
+
   try {
     await db.client.update({
       where: { id },
@@ -77,6 +87,7 @@ export async function updateClient(id: string, data: ClientInput): Promise<Actio
       },
     });
 
+    log.info({ clientName: data.name }, "Client updated");
     revalidatePath("/clients");
     revalidatePath(`/clients/${id}`);
     revalidatePath("/invoices/new");
@@ -90,14 +101,17 @@ export async function updateClient(id: string, data: ClientInput): Promise<Actio
       "code" in error &&
       error.code === "P2002"
     ) {
+      log.warn({ email: data.email }, "Client with this email already exists");
       return { success: false, error: "A client with this email already exists", field: "email" };
     }
+    log.error({ error }, "Failed to update client");
     throw error;
   }
 }
 
 export async function archiveClient(id: string): Promise<ActionResult<void>> {
   const userId = await getCurrentUserId();
+  const log = createLogger({ action: "archiveClient", userId, clientId: id });
 
   // Verify ownership
   const existing = await db.client.findFirst({
@@ -108,11 +122,14 @@ export async function archiveClient(id: string): Promise<ActionResult<void>> {
     return { success: false, error: "Client not found" };
   }
 
+  log.info({ clientName: existing.name }, "Archiving client");
+
   await db.client.update({
     where: { id },
     data: { archivedAt: new Date() },
   });
 
+  log.info({ clientName: existing.name }, "Client archived");
   revalidatePath("/clients");
   revalidatePath(`/clients/${id}`);
   revalidatePath("/invoices/new");
@@ -122,6 +139,7 @@ export async function archiveClient(id: string): Promise<ActionResult<void>> {
 
 export async function restoreClient(id: string): Promise<ActionResult<void>> {
   const userId = await getCurrentUserId();
+  const log = createLogger({ action: "restoreClient", userId, clientId: id });
 
   // Verify ownership
   const existing = await db.client.findFirst({
@@ -132,11 +150,14 @@ export async function restoreClient(id: string): Promise<ActionResult<void>> {
     return { success: false, error: "Client not found" };
   }
 
+  log.info({ clientName: existing.name }, "Restoring client");
+
   await db.client.update({
     where: { id },
     data: { archivedAt: null },
   });
 
+  log.info({ clientName: existing.name }, "Client restored");
   revalidatePath("/clients");
   revalidatePath(`/clients/${id}`);
   revalidatePath("/invoices/new");

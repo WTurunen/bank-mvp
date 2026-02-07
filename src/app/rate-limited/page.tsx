@@ -3,21 +3,24 @@ import Link from "next/link";
 export default function RateLimitedPage() {
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-50">
-      <div className="max-w-md w-full space-y-8 p-8 bg-white rounded-lg shadow text-center">
+      <div className="max-w-md w-full space-y-8 p-8 bg-white rounded-lg shadow">
         <div>
-          <h2 className="text-3xl font-bold text-gray-900">
+          <h2 className="text-center text-3xl font-bold text-gray-900">
             Too Many Requests
           </h2>
-          <p className="mt-4 text-gray-600">
-            You&apos;ve made too many requests. Please wait a moment and try again.
+          <p className="mt-4 text-center text-gray-600">
+            You have exceeded the rate limit. Please wait a moment and try
+            again.
           </p>
         </div>
-        <Link
-          href="/"
-          className="inline-block px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
-        >
-          Go to Dashboard
-        </Link>
+        <div className="text-center">
+          <Link
+            href="/"
+            className="text-blue-600 hover:text-blue-800 underline"
+          >
+            Return to Dashboard
+          </Link>
+        </div>
       </div>
     </div>
   );

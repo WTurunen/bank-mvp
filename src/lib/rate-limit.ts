@@ -1,31 +1,17 @@
 import { RateLimiter } from "limiter";
 
 export const RATE_LIMIT_CONFIG = {
-  // Authenticated users: 100 requests per minute
-  authenticated: {
-    tokens: 100,
-    interval: 60 * 1000, // 1 minute in ms
-  },
-  // Unauthenticated users: 20 requests per minute
-  unauthenticated: {
-    tokens: 20,
-    interval: 60 * 1000,
-  },
-  // Login/register: 5 attempts per minute (prevent brute force)
-  auth: {
-    tokens: 5,
-    interval: 60 * 1000,
-  },
+  authenticated: { tokens: 100, interval: 60 * 1000 },
+  unauthenticated: { tokens: 20, interval: 60 * 1000 },
+  auth: { tokens: 5, interval: 60 * 1000 },
 } as const;
 
-// Store limiters by key (IP or user ID)
 const limiters = new Map<string, RateLimiter>();
 
 type RateLimitType = keyof typeof RATE_LIMIT_CONFIG;
 
 function getLimiter(key: string, type: RateLimitType): RateLimiter {
   const cacheKey = `${type}:${key}`;
-
   if (!limiters.has(cacheKey)) {
     const config = RATE_LIMIT_CONFIG[type];
     limiters.set(
@@ -36,7 +22,6 @@ function getLimiter(key: string, type: RateLimitType): RateLimiter {
       })
     );
   }
-
   return limiters.get(cacheKey)!;
 }
 
@@ -52,20 +37,9 @@ export async function checkRateLimit(
 ): Promise<RateLimitResult> {
   const limiter = getLimiter(key, type);
   const remaining = await limiter.removeTokens(1);
-
   return {
     success: remaining >= 0,
     remaining: Math.max(0, Math.floor(remaining)),
     reset: Date.now() + RATE_LIMIT_CONFIG[type].interval,
   };
 }
-
-// Clean up old limiters periodically (every 5 minutes)
-setInterval(() => {
-  for (const [key, limiter] of limiters.entries()) {
-    // Remove limiters that haven't been used in 10 minutes
-    if (limiter.getTokensRemaining() === limiter.tokenBucket.tokensPerInterval) {
-      limiters.delete(key);
-    }
-  }
-}, 5 * 60 * 1000);
