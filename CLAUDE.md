@@ -136,6 +136,6 @@ Prefer **deep modules** over small ones. A class with few methods hiding signifi
 
 3. **Atomic commits.** Each commit should represent one logical change. Group related files together (e.g., component + its tests), but separate distinct features or layers. Never bundle unrelated changes in a single commit.
 
-4. **Always code review before commit.** Dispatch a review agent to check changes before staging and committing. The review should verify implementation matches the spec exactly — nothing added beyond the spec, nothing omitted from it.
+4. **Always code review before push.** After completing a feature (all tasks done), dispatch a review agent to check changes before pushing to remote. For atomic task-based workflows, make commits for each task, then review once before pushing. The review should verify implementation matches the spec exactly — nothing added beyond the spec, nothing omitted from it.
 
 5. **Always run tests before push.** Run `npm run typecheck` and `npm run test:run` (or equivalent) and verify they pass before pushing to remote.
