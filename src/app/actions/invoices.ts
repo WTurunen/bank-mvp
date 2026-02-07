@@ -402,6 +402,21 @@ export async function getDashboardStats(): Promise<DashboardStats> {
   };
 }
 
+export async function getInvoiceTotals(invoiceIds: string[]): Promise<Map<string, number>> {
+  if (invoiceIds.length === 0) return new Map();
+
+  const results = await db.$queryRaw<{ invoiceId: string; total: number }[]>`
+    SELECT
+      "invoiceId",
+      SUM(quantity * "unitPrice") as total
+    FROM "LineItem"
+    WHERE "invoiceId" IN (${Prisma.join(invoiceIds)})
+    GROUP BY "invoiceId"
+  `;
+
+  return new Map(results.map(r => [r.invoiceId, Number(r.total)]));
+}
+
 export async function getInvoice(id: string, includeArchived = false) {
   const userId = await getCurrentUserId();
 
