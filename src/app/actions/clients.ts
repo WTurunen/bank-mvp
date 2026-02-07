@@ -5,6 +5,13 @@ import { revalidatePath } from "next/cache";
 import { getCurrentUserId } from "@/lib/auth";
 import { clientSchema, ActionResult, validationError } from "@/lib/schemas";
 import { createLogger } from "@/lib/logger";
+import {
+  PaginationParams,
+  PaginatedResult,
+  DEFAULT_PAGE_SIZE,
+  calculateSkipTake,
+  calculatePaginationMeta,
+} from "@/lib/pagination";
 
 export type ClientInput = {
   name: string;
@@ -174,15 +181,31 @@ export async function getClient(id: string) {
   });
 }
 
-export async function getClients(includeArchived = false) {
+export async function getClients(
+  includeArchived = false,
+  pagination: PaginationParams = { page: 1, pageSize: DEFAULT_PAGE_SIZE }
+) {
   const userId = await getCurrentUserId();
+  const { skip, take } = calculateSkipTake(pagination);
 
-  return db.client.findMany({
-    where: {
-      userId,
-      ...(includeArchived ? {} : { archivedAt: null }),
-    },
-    include: { _count: { select: { invoices: true } } },
-    orderBy: { name: "asc" },
-  });
+  const where = {
+    userId,
+    ...(includeArchived ? {} : { archivedAt: null }),
+  };
+
+  const [clients, totalCount] = await Promise.all([
+    db.client.findMany({
+      where,
+      include: { _count: { select: { invoices: true } } },
+      orderBy: { name: "asc" },
+      skip,
+      take,
+    }),
+    db.client.count({ where }),
+  ]);
+
+  return {
+    data: clients,
+    pagination: calculatePaginationMeta(totalCount, pagination),
+  };
 }
