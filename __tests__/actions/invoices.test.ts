@@ -393,7 +393,16 @@ describe('getInvoice', () => {
 
     expect(db.invoice.findFirst).toHaveBeenCalledWith({
       where: { id: 'invoice-1', userId: 'test-user-id', archivedAt: null },
-      include: { lineItems: true },
+      include: {
+        lineItems: true,
+        client: {
+          select: {
+            id: true,
+            name: true,
+            email: true,
+          },
+        },
+      },
     })
     expect(result?.lineItems[0].quantity).toBe(1)
     expect(result?.lineItems[0].unitPrice).toBe(100)

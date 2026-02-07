@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { getInvoices } from "./actions/invoices";
+import { getInvoicesList, getDashboardStats, type InvoiceListItem } from "./actions/invoices";
 import { getClient } from "./actions/clients";
 import { Button } from "@/components/ui/button";
 import {
@@ -10,7 +10,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { formatCurrency, formatDate, calculateInvoiceTotal } from "@/lib/utils";
+import { formatCurrency, formatDate } from "@/lib/utils";
 import { StatCard } from "@/components/stat-card";
 import { StatusBadge } from "@/components/status-badge";
 import { DollarSign, CheckCircle, AlertTriangle, Plus, X } from "lucide-react";
@@ -25,24 +25,11 @@ export default async function Dashboard({ searchParams }: Props) {
   const params = await searchParams;
   const pagination = parsePaginationParams(params);
   const showArchived = params.showArchived === "true";
-  const { data: invoices, pagination: paginationMeta } = await getInvoices(
-    params.clientId,
-    pagination,
-    showArchived
-  );
-  const filterClient = params.clientId ? await getClient(params.clientId) : null;
-
-  const stats = {
-    outstanding: invoices
-      .filter((inv) => inv.status === "sent")
-      .reduce((sum, inv) => sum + calculateInvoiceTotal(inv.lineItems), 0),
-    paid: invoices
-      .filter((inv) => inv.status === "paid")
-      .reduce((sum, inv) => sum + calculateInvoiceTotal(inv.lineItems), 0),
-    overdue: invoices.filter(
-      (inv) => inv.status === "sent" && new Date(inv.dueDate) < new Date()
-    ).length,
-  };
+  const [{ data: invoices, pagination: paginationMeta }, stats, filterClient] = await Promise.all([
+    getInvoicesList(params.clientId, pagination, showArchived),
+    getDashboardStats(),
+    params.clientId ? getClient(params.clientId) : null,
+  ]);
 
   return (
     <div className="min-h-screen bg-slate-50">
@@ -75,22 +62,22 @@ export default async function Dashboard({ searchParams }: Props) {
           <StatCard
             icon={<DollarSign className="w-6 h-6" />}
             label="Outstanding"
-            value={formatCurrency(stats.outstanding)}
-            subtext={`${invoices.filter(inv => inv.status === "sent").length} invoices`}
+            value={formatCurrency(stats.totalOutstanding)}
+            subtext={`${stats.invoiceCount} invoices`}
             variant="blue"
           />
           <StatCard
             icon={<CheckCircle className="w-6 h-6" />}
             label="Paid"
-            value={formatCurrency(stats.paid)}
-            subtext={`${invoices.filter(inv => inv.status === "paid").length} invoices`}
+            value={formatCurrency(stats.totalPaid)}
+            subtext="total"
             variant="green"
           />
           <StatCard
             icon={<AlertTriangle className="w-6 h-6" />}
             label="Overdue"
-            value={String(stats.overdue)}
-            subtext="invoices"
+            value={String(stats.overdueCount)}
+            subtext={stats.overdueCount > 0 ? formatCurrency(stats.totalOverdue) : "none"}
             variant="red"
           />
         </div>
@@ -130,7 +117,7 @@ export default async function Dashboard({ searchParams }: Props) {
                   </TableCell>
                 </TableRow>
               ) : (
-                invoices.map((invoice) => (
+                invoices.map((invoice: InvoiceListItem) => (
                   <TableRow key={invoice.id} className="hover:bg-slate-50">
                     <TableCell className="font-medium text-blue-600">
                       <Link href={`/invoices/${invoice.id}/preview`}>
@@ -139,7 +126,7 @@ export default async function Dashboard({ searchParams }: Props) {
                     </TableCell>
                     <TableCell>{invoice.clientName}</TableCell>
                     <TableCell className="tabular-nums">
-                      {formatCurrency(calculateInvoiceTotal(invoice.lineItems))}
+                      {formatCurrency(invoice.total)}
                     </TableCell>
                     <TableCell>
                       <StatusBadge

@@ -11,6 +11,7 @@ import { Prisma } from "@prisma/client";
 import { createLogger } from "@/lib/logger";
 import {
   PaginationParams,
+  PaginatedResult,
   DEFAULT_PAGE_SIZE,
   calculateSkipTake,
   calculatePaginationMeta,
@@ -344,6 +345,146 @@ export async function getInvoices(
   };
 }
 
+export type InvoiceListItem = {
+  id: string;
+  invoiceNumber: string;
+  clientName: string;
+  status: string;
+  dueDate: Date;
+  total: number;
+  archivedAt: Date | null;
+};
+
+export async function getInvoicesList(
+  clientId?: string,
+  pagination: PaginationParams = { page: 1, pageSize: DEFAULT_PAGE_SIZE },
+  includeArchived = false
+): Promise<PaginatedResult<InvoiceListItem>> {
+  const userId = await getCurrentUserId();
+  const { skip, take } = calculateSkipTake(pagination);
+
+  const where = {
+    userId,
+    ...(clientId ? { clientId } : {}),
+    ...(includeArchived ? {} : { archivedAt: null }),
+  };
+
+  const [invoices, totalCount] = await Promise.all([
+    db.invoice.findMany({
+      where,
+      select: {
+        id: true,
+        invoiceNumber: true,
+        clientName: true,
+        status: true,
+        dueDate: true,
+        archivedAt: true,
+        lineItems: {
+          select: {
+            quantity: true,
+            unitPrice: true,
+          },
+        },
+      },
+      orderBy: { createdAt: "desc" },
+      skip,
+      take,
+    }),
+    db.invoice.count({ where }),
+  ]);
+
+  const data: InvoiceListItem[] = invoices.map((invoice) => ({
+    id: invoice.id,
+    invoiceNumber: invoice.invoiceNumber,
+    clientName: invoice.clientName,
+    status: invoice.status,
+    dueDate: invoice.dueDate,
+    archivedAt: invoice.archivedAt,
+    total: invoice.lineItems.reduce(
+      (sum, item) => sum + item.quantity.toNumber() * item.unitPrice.toNumber(),
+      0
+    ),
+  }));
+
+  return {
+    data,
+    pagination: calculatePaginationMeta(totalCount, pagination),
+  };
+}
+
+export type DashboardStats = {
+  totalOutstanding: number;
+  totalPaid: number;
+  totalOverdue: number;
+  invoiceCount: number;
+  overdueCount: number;
+};
+
+export async function getDashboardStats(): Promise<DashboardStats> {
+  const userId = await getCurrentUserId();
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+
+  const invoices = await db.invoice.findMany({
+    where: { userId, archivedAt: null },
+    select: {
+      status: true,
+      dueDate: true,
+      lineItems: {
+        select: {
+          quantity: true,
+          unitPrice: true,
+        },
+      },
+    },
+  });
+
+  let totalOutstanding = 0;
+  let totalPaid = 0;
+  let totalOverdue = 0;
+  let overdueCount = 0;
+
+  for (const invoice of invoices) {
+    const total = invoice.lineItems.reduce(
+      (sum, item) => sum + item.quantity.toNumber() * item.unitPrice.toNumber(),
+      0
+    );
+
+    if (invoice.status === "paid") {
+      totalPaid += total;
+    } else if (invoice.status === "sent") {
+      totalOutstanding += total;
+      if (new Date(invoice.dueDate) < today) {
+        totalOverdue += total;
+        overdueCount++;
+      }
+    }
+  }
+
+  return {
+    totalOutstanding,
+    totalPaid,
+    totalOverdue,
+    invoiceCount: invoices.length,
+    overdueCount,
+  };
+}
+
+export async function getInvoiceTotals(invoiceIds: string[]): Promise<Map<string, number>> {
+  if (invoiceIds.length === 0) return new Map();
+
+  const results = await db.$queryRaw<{ invoiceId: string; total: number }[]>`
+    SELECT
+      "invoiceId",
+      SUM(quantity * "unitPrice") as total
+    FROM "LineItem"
+    WHERE "invoiceId" IN (${Prisma.join(invoiceIds)})
+    GROUP BY "invoiceId"
+  `;
+
+  return new Map(results.map(r => [r.invoiceId, Number(r.total)]));
+}
+
 export async function getInvoice(id: string, includeArchived = false) {
   const userId = await getCurrentUserId();
 
@@ -353,7 +494,16 @@ export async function getInvoice(id: string, includeArchived = false) {
       userId,
       ...(includeArchived ? {} : { archivedAt: null }),
     },
-    include: { lineItems: true },
+    include: {
+      lineItems: true,
+      client: {
+        select: {
+          id: true,
+          name: true,
+          email: true,
+        },
+      },
+    },
   });
 
   if (!invoice) return null;

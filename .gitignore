@@ -29,6 +29,9 @@ tsconfig.tsbuildinfo
 .DS_Store
 Thumbs.db
 
+# Test coverage
+coverage
+
 # Git worktrees
 .worktrees
 
