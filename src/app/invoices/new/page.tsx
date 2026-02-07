@@ -4,7 +4,7 @@ import { InvoiceForm } from "@/components/invoice-form";
 import { getClients } from "@/app/actions/clients";
 
 export default async function NewInvoicePage() {
-  const clients = await getClients(false);
+  const { data: clients } = await getClients(false, { page: 1, pageSize: 100 });
 
   return (
     <div className="min-h-screen bg-gray-50">

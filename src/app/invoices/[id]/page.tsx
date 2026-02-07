@@ -12,14 +12,16 @@ type Props = {
 
 export default async function EditInvoicePage({ params }: Props) {
   const { id } = await params;
-  const [invoice, clients] = await Promise.all([
+  const [invoice, clientsResult] = await Promise.all([
     getInvoice(id),
-    getClients(false),
+    getClients(false, { page: 1, pageSize: 100 }),
   ]);
 
   if (!invoice) {
     notFound();
   }
+
+  const clients = clientsResult.data;
 
   const statusColors: Record<string, string> = {
     draft: "bg-gray-100 text-gray-800",
