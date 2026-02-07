@@ -130,12 +130,20 @@ Prefer **deep modules** over small ones. A class with few methods hiding signifi
 
 ## Workflow Rules
 
-1. **Teach during brainstorming.** When designing features, explain the reasoning behind decisions - what production SaaS platforms do, why certain patterns scale better, trade-offs between approaches. This builds product intuition alongside the code.
+1. **Test-Driven Development (TDD).** When implementing new functionality or fixing bugs where applicable:
+   - Write the test first that defines the expected behavior
+   - Run the test and watch it fail (red)
+   - Write the minimal code to make the test pass (green)
+   - Refactor while keeping tests green
+   - Exceptions: exploratory coding, UI/styling work, or when explicitly specified otherwise
+   - Test file naming: `*.test.ts` or `*.test.tsx` co-located with source files or in `__tests__/`
 
-2. **Use best model (opus) for planning, lesser models (sonnet/haiku) for implementation and review.** Planning requires deep thinking; implementation and review can be parallelized with faster models.
+2. **Teach during brainstorming.** When designing features, explain the reasoning behind decisions - what production SaaS platforms do, why certain patterns scale better, trade-offs between approaches. This builds product intuition alongside the code.
 
-3. **Atomic commits.** Each commit should represent one logical change. Group related files together (e.g., component + its tests), but separate distinct features or layers. Never bundle unrelated changes in a single commit.
+3. **Use best model (opus) for planning, lesser models (sonnet/haiku) for implementation and review.** Planning requires deep thinking; implementation and review can be parallelized with faster models.
 
-4. **Always code review before commit.** Dispatch a review agent to check changes before staging and committing. The review should verify implementation matches the spec exactly — nothing added beyond the spec, nothing omitted from it.
+4. **Atomic commits.** Each commit should represent one logical change. Group related files together (e.g., component + its tests), but separate distinct features or layers. Never bundle unrelated changes in a single commit.
 
-5. **Always run tests before push.** Run `npm run typecheck` and `npm run test:run` (or equivalent) and verify they pass before pushing to remote.
+5. **Always code review before commit.** Dispatch a review agent to check changes before staging and committing. The review should verify implementation matches the spec exactly — nothing added beyond the spec, nothing omitted from it.
+
+6. **Always run tests before push.** Run `npm run typecheck` and `npm run test:run` (or equivalent) and verify they pass before pushing to remote.
