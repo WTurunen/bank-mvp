@@ -348,6 +348,7 @@ describe('getInvoices', () => {
     expect(result.data[0].lineItems[0].unitPrice).toBe(100)
     expect(result.pagination.totalCount).toBe(1)
     expect(result.pagination.page).toBe(1)
+    expect(result.pagination.totalPages).toBe(1)
   })
 
   it('filters by clientId when provided', async () => {

@@ -10,6 +10,16 @@ vi.mock('next/link', () => ({
   ),
 }))
 
+vi.mock('next/navigation', () => ({
+  useRouter: () => ({
+    push: vi.fn(),
+    refresh: vi.fn(),
+  }),
+  useSearchParams: () => ({
+    toString: () => '',
+  }),
+}))
+
 // Mock the actions
 vi.mock('@/app/actions/clients', () => ({
   getClients: vi.fn(),
@@ -47,6 +57,18 @@ const mockClients = [
   },
 ]
 
+const mockPaginatedClients = {
+  data: mockClients,
+  pagination: {
+    page: 1,
+    pageSize: 20,
+    totalCount: 2,
+    totalPages: 1,
+    hasNextPage: false,
+    hasPrevPage: false,
+  },
+}
+
 describe('ClientsPage error handling', () => {
   beforeEach(() => {
     vi.clearAllMocks()
@@ -55,7 +77,7 @@ describe('ClientsPage error handling', () => {
   it('displays error message when getClients fails', async () => {
     vi.mocked(getClients).mockRejectedValue(new Error('Database connection failed'))
 
-    render(<ClientsPage />)
+    render(<ClientsPage searchParams={Promise.resolve({})} />)
 
     await waitFor(() => {
       expect(screen.getByText('Database connection failed')).toBeInTheDocument()
@@ -67,7 +89,7 @@ describe('ClientsPage error handling', () => {
   it('shows generic error message for non-Error objects', async () => {
     vi.mocked(getClients).mockRejectedValue('Unknown error')
 
-    render(<ClientsPage />)
+    render(<ClientsPage searchParams={Promise.resolve({})} />)
 
     await waitFor(() => {
       expect(screen.getByText('Failed to load clients')).toBeInTheDocument()
@@ -78,9 +100,9 @@ describe('ClientsPage error handling', () => {
     // First call fails
     vi.mocked(getClients).mockRejectedValueOnce(new Error('Network error'))
     // Second call succeeds
-    vi.mocked(getClients).mockResolvedValueOnce(mockClients)
+    vi.mocked(getClients).mockResolvedValueOnce(mockPaginatedClients)
 
-    render(<ClientsPage />)
+    render(<ClientsPage searchParams={Promise.resolve({})} />)
 
     // Wait for error to appear
     await waitFor(() => {
@@ -103,9 +125,9 @@ describe('ClientsPage error handling', () => {
 
   it('clears error state when retrying', async () => {
     vi.mocked(getClients).mockRejectedValueOnce(new Error('Initial error'))
-    vi.mocked(getClients).mockResolvedValueOnce(mockClients)
+    vi.mocked(getClients).mockResolvedValueOnce(mockPaginatedClients)
 
-    render(<ClientsPage />)
+    render(<ClientsPage searchParams={Promise.resolve({})} />)
 
     await waitFor(() => {
       expect(screen.getByText('Initial error')).toBeInTheDocument()
