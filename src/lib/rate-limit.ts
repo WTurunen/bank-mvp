@@ -62,7 +62,6 @@ export async function checkRateLimit(
 
 // Clean up old limiters periodically (every 5 minutes)
 setInterval(() => {
-  const now = Date.now();
   for (const [key, limiter] of limiters.entries()) {
     // Remove limiters that haven't been used in 10 minutes
     if (limiter.getTokensRemaining() === limiter.tokenBucket.tokensPerInterval) {
