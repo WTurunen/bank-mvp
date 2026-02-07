@@ -1,9 +1,5 @@
-"use client";
-
-import { useState, useEffect } from "react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import {
   Table,
@@ -13,61 +9,25 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Plus, Search, Archive } from "lucide-react";
-import { getClients, restoreClient } from "@/app/actions/clients";
+import { Plus, Archive } from "lucide-react";
+import { getClients } from "@/app/actions/clients";
+import { Pagination } from "@/components/pagination";
+import { parsePaginationParams } from "@/lib/pagination";
+import { ClientsPageClient } from "@/components/clients-page-client";
+import { ArchivedToggle } from "@/components/archived-toggle";
 
-type Client = {
-  id: string;
-  name: string;
-  email: string;
-  phone: string | null;
-  address: string | null;
-  archivedAt: Date | null;
-  _count: { invoices: number };
+type Props = {
+  searchParams: Promise<{ page?: string; archived?: string }>;
 };
 
-export default function ClientsPage() {
-  const [clients, setClients] = useState<Client[]>([]);
-  const [searchQuery, setSearchQuery] = useState("");
-  const [showArchived, setShowArchived] = useState(false);
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-
-  const loadClients = async () => {
-    setIsLoading(true);
-    setError(null);
-    try {
-      const data = await getClients(showArchived);
-      setClients(data);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to load clients");
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    loadClients();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [showArchived]);
-
-  const handleRestore = async (id: string) => {
-    await restoreClient(id);
-    const data = await getClients(showArchived);
-    setClients(data);
-  };
-
-  const handleRetry = () => {
-    loadClients();
-  };
-
-  const filteredClients = clients.filter((client) => {
-    const query = searchQuery.toLowerCase();
-    return (
-      client.name.toLowerCase().includes(query) ||
-      client.email.toLowerCase().includes(query)
-    );
-  });
+export default async function ClientsPage({ searchParams }: Props) {
+  const params = await searchParams;
+  const pagination = parsePaginationParams(params);
+  const includeArchived = params.archived === "true";
+  const { data: clients, pagination: paginationMeta } = await getClients(
+    includeArchived,
+    pagination
+  );
 
   return (
     <div className="min-h-screen bg-slate-50">
@@ -85,18 +45,6 @@ export default function ClientsPage() {
           </Link>
         </div>
 
-        <div className="mb-6">
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-            <Input
-              placeholder="Search by name or email..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="pl-10"
-            />
-          </div>
-        </div>
-
         <div className="bg-white shadow-sm ring-1 ring-slate-900/5 rounded-lg overflow-hidden">
           <Table>
             <TableHeader>
@@ -109,31 +57,14 @@ export default function ClientsPage() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {error ? (
-                <TableRow>
-                  <TableCell colSpan={5} className="text-center py-8">
-                    <div className="text-red-600 mb-2">{error}</div>
-                    <Button variant="outline" onClick={handleRetry}>
-                      Retry
-                    </Button>
-                  </TableCell>
-                </TableRow>
-              ) : isLoading ? (
+              {clients.length === 0 ? (
                 <TableRow>
                   <TableCell colSpan={5} className="text-center text-slate-500 py-8">
-                    Loading...
-                  </TableCell>
-                </TableRow>
-              ) : filteredClients.length === 0 ? (
-                <TableRow>
-                  <TableCell colSpan={5} className="text-center text-slate-500 py-8">
-                    {searchQuery
-                      ? "No clients match your search."
-                      : "No clients yet. Create your first client to get started."}
+                    No clients yet. Create your first client to get started.
                   </TableCell>
                 </TableRow>
               ) : (
-                filteredClients.map((client) => (
+                clients.map((client) => (
                   <TableRow
                     key={client.id}
                     className={`hover:bg-slate-50 ${client.archivedAt ? "opacity-60" : ""}`}
@@ -175,13 +106,7 @@ export default function ClientsPage() {
                         </Button>
                       </Link>
                       {client.archivedAt && (
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => handleRestore(client.id)}
-                        >
-                          Restore
-                        </Button>
+                        <ClientsPageClient clientId={client.id} includeArchived={includeArchived} />
                       )}
                     </TableCell>
                   </TableRow>
@@ -189,20 +114,10 @@ export default function ClientsPage() {
               )}
             </TableBody>
           </Table>
+          <Pagination pagination={paginationMeta} />
         </div>
 
-        <div className="mt-4 flex items-center gap-2">
-          <input
-            type="checkbox"
-            id="showArchived"
-            checked={showArchived}
-            onChange={(e) => setShowArchived(e.target.checked)}
-            className="rounded border-slate-300"
-          />
-          <label htmlFor="showArchived" className="text-sm text-slate-600">
-            Show archived clients
-          </label>
-        </div>
+        <ArchivedToggle checked={includeArchived} />
       </div>
     </div>
   );
