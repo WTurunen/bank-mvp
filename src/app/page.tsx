@@ -13,22 +13,20 @@ import {
 import { formatCurrency, formatDate, calculateInvoiceTotal } from "@/lib/utils";
 import { StatCard } from "@/components/stat-card";
 import { StatusBadge } from "@/components/status-badge";
-import { DollarSign, CheckCircle, AlertTriangle, Plus, X } from "lucide-react";
-import { parsePaginationParams } from "@/lib/pagination";
 import { Pagination } from "@/components/pagination";
+import { parsePaginationParams } from "@/lib/pagination";
+import { DollarSign, CheckCircle, AlertTriangle, Plus, X } from "lucide-react";
 
 type Props = {
-  searchParams: Promise<{ clientId?: string; page?: string; showArchived?: string }>;
+  searchParams: Promise<{ clientId?: string; page?: string }>;
 };
 
 export default async function Dashboard({ searchParams }: Props) {
   const params = await searchParams;
   const pagination = parsePaginationParams(params);
-  const showArchived = params.showArchived === "true";
   const { data: invoices, pagination: paginationMeta } = await getInvoices(
     params.clientId,
-    pagination,
-    showArchived
+    pagination
   );
   const filterClient = params.clientId ? await getClient(params.clientId) : null;
 
@@ -93,18 +91,6 @@ export default async function Dashboard({ searchParams }: Props) {
             subtext="invoices"
             variant="red"
           />
-        </div>
-
-        <div className="flex justify-between items-center mb-4">
-          <h2 className="text-lg font-medium text-slate-700">
-            {showArchived ? "All invoices (including archived)" : "Active invoices"}
-          </h2>
-          <Link
-            href={showArchived ? "/" : "/?showArchived=true"}
-            className="text-sm text-blue-600 hover:underline"
-          >
-            {showArchived ? "Hide archived" : "Show archived"}
-          </Link>
         </div>
 
         <div className="bg-white shadow-sm ring-1 ring-slate-900/5 rounded-lg overflow-hidden">
