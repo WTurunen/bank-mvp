@@ -174,6 +174,47 @@ export async function getClient(id: string) {
   });
 }
 
+export type ClientListItem = {
+  id: string;
+  name: string;
+  email: string;
+  phone: string | null;
+  address: string | null;
+  invoiceCount: number;
+  archivedAt: Date | null;
+};
+
+export async function getClientsList(includeArchived = false): Promise<ClientListItem[]> {
+  const userId = await getCurrentUserId();
+
+  const clients = await db.client.findMany({
+    where: {
+      userId,
+      ...(includeArchived ? {} : { archivedAt: null }),
+    },
+    select: {
+      id: true,
+      name: true,
+      email: true,
+      phone: true,
+      address: true,
+      archivedAt: true,
+      _count: { select: { invoices: true } },
+    },
+    orderBy: { name: "asc" },
+  });
+
+  return clients.map((client) => ({
+    id: client.id,
+    name: client.name,
+    email: client.email,
+    phone: client.phone,
+    address: client.address,
+    invoiceCount: client._count.invoices,
+    archivedAt: client.archivedAt,
+  }));
+}
+
 export async function getClients(includeArchived = false) {
   const userId = await getCurrentUserId();
 
