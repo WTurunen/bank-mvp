@@ -344,6 +344,64 @@ export async function getInvoices(
   };
 }
 
+export type DashboardStats = {
+  totalOutstanding: number;
+  totalPaid: number;
+  totalOverdue: number;
+  invoiceCount: number;
+  overdueCount: number;
+};
+
+export async function getDashboardStats(): Promise<DashboardStats> {
+  const userId = await getCurrentUserId();
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+
+  const invoices = await db.invoice.findMany({
+    where: { userId, archivedAt: null },
+    select: {
+      status: true,
+      dueDate: true,
+      lineItems: {
+        select: {
+          quantity: true,
+          unitPrice: true,
+        },
+      },
+    },
+  });
+
+  let totalOutstanding = 0;
+  let totalPaid = 0;
+  let totalOverdue = 0;
+  let overdueCount = 0;
+
+  for (const invoice of invoices) {
+    const total = invoice.lineItems.reduce(
+      (sum, item) => sum + item.quantity.toNumber() * item.unitPrice.toNumber(),
+      0
+    );
+
+    if (invoice.status === "paid") {
+      totalPaid += total;
+    } else if (invoice.status === "sent") {
+      totalOutstanding += total;
+      if (new Date(invoice.dueDate) < today) {
+        totalOverdue += total;
+        overdueCount++;
+      }
+    }
+  }
+
+  return {
+    totalOutstanding,
+    totalPaid,
+    totalOverdue,
+    invoiceCount: invoices.length,
+    overdueCount,
+  };
+}
+
 export async function getInvoice(id: string, includeArchived = false) {
   const userId = await getCurrentUserId();
 
