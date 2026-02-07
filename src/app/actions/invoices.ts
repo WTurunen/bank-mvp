@@ -344,6 +344,73 @@ export async function getInvoices(
   };
 }
 
+export type InvoiceListItem = {
+  id: string;
+  invoiceNumber: string;
+  clientName: string;
+  status: string;
+  dueDate: Date;
+  total: number;
+  archivedAt: Date | null;
+};
+
+export async function getInvoicesList(
+  clientId?: string,
+  pagination: PaginationParams = { page: 1, pageSize: DEFAULT_PAGE_SIZE },
+  includeArchived = false
+): Promise<PaginatedResult<InvoiceListItem>> {
+  const userId = await getCurrentUserId();
+  const { skip, take } = calculateSkipTake(pagination);
+
+  const where = {
+    userId,
+    ...(clientId ? { clientId } : {}),
+    ...(includeArchived ? {} : { archivedAt: null }),
+  };
+
+  const [invoices, totalCount] = await Promise.all([
+    db.invoice.findMany({
+      where,
+      select: {
+        id: true,
+        invoiceNumber: true,
+        clientName: true,
+        status: true,
+        dueDate: true,
+        archivedAt: true,
+        lineItems: {
+          select: {
+            quantity: true,
+            unitPrice: true,
+          },
+        },
+      },
+      orderBy: { createdAt: "desc" },
+      skip,
+      take,
+    }),
+    db.invoice.count({ where }),
+  ]);
+
+  const data: InvoiceListItem[] = invoices.map((invoice) => ({
+    id: invoice.id,
+    invoiceNumber: invoice.invoiceNumber,
+    clientName: invoice.clientName,
+    status: invoice.status,
+    dueDate: invoice.dueDate,
+    archivedAt: invoice.archivedAt,
+    total: invoice.lineItems.reduce(
+      (sum, item) => sum + item.quantity.toNumber() * item.unitPrice.toNumber(),
+      0
+    ),
+  }));
+
+  return {
+    data,
+    pagination: calculatePaginationMeta(totalCount, pagination),
+  };
+}
+
 export type DashboardStats = {
   totalOutstanding: number;
   totalPaid: number;
