@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { InvoiceStatus as PrismaInvoiceStatus } from "@prisma/client";
 
 export const clientSchema = z.object({
   name: z
@@ -75,6 +76,7 @@ export const invoiceSchema = z.object({
 
 export type InvoiceSchema = z.infer<typeof invoiceSchema>;
 
+// Use Prisma-generated enum values for type safety
 export const VALID_STATUSES = ["draft", "sent", "paid"] as const;
 
 // @ts-expect-error: errorMap is a valid runtime option for z.enum
@@ -82,7 +84,8 @@ export const invoiceStatusSchema = z.enum(VALID_STATUSES, {
   errorMap: () => ({ message: "Status must be draft, sent, or paid" }),
 });
 
-export type InvoiceStatus = z.infer<typeof invoiceStatusSchema>;
+// Export Prisma's InvoiceStatus type for consistency
+export type InvoiceStatus = PrismaInvoiceStatus;
 
 export type ActionResult<T = void> =
   | { success: true; data: T }

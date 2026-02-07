@@ -1,4 +1,4 @@
-import { PrismaClient } from '@prisma/client';
+import { PrismaClient, InvoiceStatus } from '@prisma/client';
 
 const prisma = new PrismaClient();
 
@@ -174,7 +174,7 @@ async function main() {
         clientEmail: clientData.email,
         clientPhone: clientData.phone,
         clientAddress: clientData.address,
-        status: inv.status,
+        status: inv.status as InvoiceStatus,
         issueDate,
         dueDate,
         lineItems: {

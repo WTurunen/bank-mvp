@@ -4,7 +4,7 @@ import { db } from "@/lib/db";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { getCurrentUserId } from "@/lib/auth";
-import { invoiceSchema, invoiceStatusSchema, ActionResult, validationError } from "@/lib/schemas";
+import { invoiceSchema, invoiceStatusSchema, ActionResult, validationError, InvoiceStatus } from "@/lib/schemas";
 
 export type LineItemInput = {
   description: string;
@@ -152,7 +152,7 @@ export async function updateInvoiceStatus(id: string, status: string): Promise<A
 
   await db.invoice.update({
     where: { id },
-    data: { status },
+    data: { status: validated.data as InvoiceStatus },
   });
 
   revalidatePath("/");

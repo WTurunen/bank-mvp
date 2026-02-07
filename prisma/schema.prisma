@@ -22,10 +22,10 @@ model Client {
 }
 
 model Invoice {
-  id            String     @id @default(cuid())
+  id            String        @id @default(cuid())
   userId        String
-  user          User       @relation(fields: [userId], references: [id])
-  invoiceNumber String     @unique
+  user          User          @relation(fields: [userId], references: [id])
+  invoiceNumber String        @unique
 
   // Reference to client (nullable for migration safety)
   clientId           String?
@@ -37,12 +37,12 @@ model Invoice {
   clientPhone        String?
   clientAddress      String?
 
-  status        String     @default("draft") // draft, sent, paid
-  issueDate     DateTime   @default(now())
+  status        InvoiceStatus @default(draft)
+  issueDate     DateTime      @default(now())
   dueDate       DateTime
   notes         String?
-  createdAt     DateTime   @default(now())
-  updatedAt     DateTime   @updatedAt
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
   lineItems     LineItem[]
 }
 
@@ -64,4 +64,10 @@ model User {
   updatedAt     DateTime  @updatedAt
   clients       Client[]
   invoices      Invoice[]
+}
+
+enum InvoiceStatus {
+  draft
+  sent
+  paid
 }

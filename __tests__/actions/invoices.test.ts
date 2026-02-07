@@ -1,4 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { InvoiceStatus } from '@prisma/client'
 
 // Mock Next.js cache functions
 vi.mock('next/cache', () => ({
@@ -54,7 +55,7 @@ const mockInvoice = {
   clientEmail: 'acme@example.com',
   clientPhone: '+1-555-123-4567',
   clientAddress: '123 Main St',
-  status: 'draft',
+  status: 'draft' as InvoiceStatus,
   issueDate: new Date('2026-01-01'),
   dueDate: new Date('2026-02-01'),
   notes: 'Test notes',
